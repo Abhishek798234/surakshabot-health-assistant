@@ -100,7 +100,7 @@ const Register = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="email">Email (Optional)</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   name="email"
@@ -108,6 +108,7 @@ const Register = () => {
                   placeholder="your.email@example.com"
                   value={formData.email}
                   onChange={handleChange}
+                  required
                   className="glass-input"
                 />
               </div>

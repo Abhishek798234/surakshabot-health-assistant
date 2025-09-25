@@ -111,19 +111,22 @@ router.post('/send-otp', async (req, res) => {
     let emailSent = false;
     let retryCount = 0;
     const maxRetries = 3;
-    
+
     while (!emailSent && retryCount < maxRetries) {
       try {
         await transporter.sendMail(mailOptions);
         emailSent = true;
+        console.log(`OTP email sent successfully to ${user.email} for phone ${cleanPhone}`);
       } catch (emailError) {
         retryCount++;
-        console.log(`Email send attempt ${retryCount} failed:`, emailError.message);
-        
+        console.error(`Email send attempt ${retryCount} failed for ${user.email}:`, emailError.message);
+        console.error('Email error details:', emailError);
+
         if (retryCount >= maxRetries) {
+          console.error(`Failed to send OTP email after ${maxRetries} attempts to ${user.email}`);
           throw emailError;
         }
-        
+
         // Wait before retry
         await new Promise(resolve => setTimeout(resolve, 2000 * retryCount));
       }

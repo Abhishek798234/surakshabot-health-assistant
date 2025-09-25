@@ -6,14 +6,18 @@ const User = require('../models/User');
 router.post('/', async (req, res) => {
   try {
     const { name, phone, email } = req.body;
-    
+
+    if (!email) {
+      return res.status(400).json({ success: false, error: 'Email is required' });
+    }
+
     let user = await User.findOne({ phone });
-    
+
     if (!user) {
       user = new User({ name, phone, email });
       await user.save();
     }
-    
+
     res.json({ success: true, user });
   } catch (error) {
     console.error('User creation error:', error);
