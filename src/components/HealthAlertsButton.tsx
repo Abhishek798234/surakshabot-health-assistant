@@ -38,7 +38,8 @@ export const HealthAlertsButton = ({ user }: HealthAlertsButtonProps) => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8001/api/health-alerts/subscribe', {
+      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8001';
+      const response = await fetch(`${BACKEND_URL}/api/health-alerts/subscribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

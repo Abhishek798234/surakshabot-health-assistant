@@ -63,7 +63,8 @@ export const findNearbyMedicalFacilities = async (
     });
     
     // Use backend API to avoid CORS issues
-    const response = await fetch('http://localhost:8001/api/places/nearby', {
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8001';
+    const response = await fetch(`${BACKEND_URL}/api/places/nearby`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

@@ -1,11 +1,37 @@
 {
   "name": "surakshabot-backend",
   "version": "1.0.0",
-  "description": "Backend server for Surakshabot health assistant",
+  "description": "Backend API for Surakshabot Health Assistant",
   "main": "index.js",
-  "type": "commonjs",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "keywords": [
+    "health",
+    "chatbot",
+    "ai",
+    "medical",
+    "api"
+  ],
+  "author": "Surakshabot Team",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "mongoose": "^7.5.0",
+    "dotenv": "^16.3.1",
+    "twilio": "^4.15.0",
+    "nodemailer": "^6.9.4",
+    "node-cron": "^3.0.2",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
   }
 }
