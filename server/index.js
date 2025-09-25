@@ -7,22 +7,31 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 8001;
 
-// Manual CORS headers
+// CORS must be first middleware
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
+  // Set CORS headers for all requests
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   
+  // Handle preflight OPTIONS requests
   if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-  } else {
-    next();
+    res.status(200).end();
+    return;
   }
+  
+  next();
 });
 
-// Also use cors middleware
-app.use(cors());
+// Additional CORS middleware
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
+  credentials: true
+}));
+
 app.use(express.json());
 
 // MongoDB Connection
@@ -50,6 +59,16 @@ app.use('/api/auth', authRoutes);
 app.use('/api/places', placesRoutes);
 app.use('/api/health-alerts', healthAlertsRoutes);
 app.use('/api/appointments', appointmentRoutes);
+
+// Test CORS endpoint
+app.get('/test-cors', (req, res) => {
+  res.json({ 
+    message: 'CORS is working!',
+    origin: req.headers.origin,
+    method: req.method,
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Root route - API information
 app.get('/', (req, res) => {
