@@ -21,8 +21,18 @@ export default defineConfig({
     commonjsOptions: {
       include: [/node_modules/],
     },
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      },
+    },
   },
   optimizeDeps: {
     include: ["next-themes", "sonner"],
+  },
+  define: {
+    global: 'globalThis',
   },
 });
