@@ -10,3 +10,6 @@
 ## Remaining Tasks
 - [ ] Guide user on setting environment variables in Render and Netlify
 - [ ] Test fixes by deploying and checking logs
+
+## Additional Fix
+- [x] Updated CSP in netlify.toml to allow 'unsafe-eval' to resolve script evaluation blocking
