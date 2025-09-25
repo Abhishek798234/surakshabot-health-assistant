@@ -123,7 +123,7 @@ router.post('/send-otp', async (req, res) => {
         // Try alternative SMTP configuration
         try {
           console.log('🔄 Trying alternative SMTP...');
-          const altTransporter = nodemailer.createTransporter({
+          const altTransporter = nodemailer.createTransport({
             host: 'smtp.gmail.com',
             port: 465,
             secure: true, // Use SSL
