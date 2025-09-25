@@ -6,12 +6,19 @@ const OTP = require('../models/OTP');
 
 // Email transporter setup
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: process.env.EMAIL_PORT,
+  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 587,
   secure: false,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
+  },
+  connectionTimeout: 60000,
+  greetingTimeout: 30000,
+  socketTimeout: 60000,
+  tls: {
+    rejectUnauthorized: false
   }
 });
 
@@ -19,6 +26,15 @@ const transporter = nodemailer.createTransport({
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
+
+// Verify transporter connection
+transporter.verify((error, success) => {
+  if (error) {
+    console.log('SMTP connection error:', error);
+  } else {
+    console.log('SMTP server is ready to take our messages');
+  }
+});
 
 // Send OTP to email
 router.post('/send-otp', async (req, res) => {
