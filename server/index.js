@@ -6,7 +6,7 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const app = express();
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 10000; // Render uses port 10000 by default
 
 // CORS configuration
 app.use(cors());
@@ -84,10 +84,10 @@ app.get('*', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`✅ Server running on http://localhost:${PORT}`);
-  console.log(`✅ Frontend: http://localhost:${PORT}`);
-  console.log(`✅ API: http://localhost:${PORT}/api`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`✅ Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`✅ MongoDB: ${process.env.MONGODB_URI ? 'Connected' : 'Not configured'}`);
 });
 
 module.exports = app;
