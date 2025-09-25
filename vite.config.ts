@@ -15,24 +15,14 @@ export default defineConfig({
     },
   },
   build: {
-    rollupOptions: {
-      external: [],
-    },
-    commonjsOptions: {
-      include: [/node_modules/],
-    },
     minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
       },
     },
   },
   optimizeDeps: {
     include: ["next-themes", "sonner"],
-  },
-  define: {
-    global: 'globalThis',
   },
 });
