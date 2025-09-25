@@ -4,22 +4,27 @@ const nodemailer = require('nodemailer');
 const User = require('../models/User');
 const OTP = require('../models/OTP');
 
-// Email transporter setup
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
+// Email transporter setup for Render cloud hosting
+const transporter = nodemailer.createTransporter({
   host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
+  port: 465,
+  secure: true,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
   },
-  connectionTimeout: 60000,
-  greetingTimeout: 30000,
-  socketTimeout: 60000,
+  connectionTimeout: 120000,
+  greetingTimeout: 60000,
+  socketTimeout: 120000,
+  pool: true,
+  maxConnections: 1,
+  rateDelta: 20000,
+  rateLimit: 5,
   tls: {
-    rejectUnauthorized: false
-  }
+    rejectUnauthorized: false,
+    ciphers: 'SSLv3'
+  },
+  debug: true
 });
 
 // Generate 6-digit OTP
@@ -27,14 +32,19 @@ const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// Verify transporter connection
-transporter.verify((error, success) => {
-  if (error) {
-    console.log('SMTP connection error:', error);
-  } else {
+// Verify transporter connection with retry
+const verifyConnection = async () => {
+  try {
+    await transporter.verify();
     console.log('SMTP server is ready to take our messages');
+  } catch (error) {
+    console.log('SMTP connection error:', error.message);
+    console.log('Retrying SMTP connection in 5 seconds...');
+    setTimeout(verifyConnection, 5000);
   }
-});
+};
+
+verifyConnection();
 
 // Send OTP to email
 router.post('/send-otp', async (req, res) => {
@@ -97,7 +107,27 @@ router.post('/send-otp', async (req, res) => {
       `
     };
     
-    await transporter.sendMail(mailOptions);
+    // Send email with retry logic
+    let emailSent = false;
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    while (!emailSent && retryCount < maxRetries) {
+      try {
+        await transporter.sendMail(mailOptions);
+        emailSent = true;
+      } catch (emailError) {
+        retryCount++;
+        console.log(`Email send attempt ${retryCount} failed:`, emailError.message);
+        
+        if (retryCount >= maxRetries) {
+          throw emailError;
+        }
+        
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, 2000 * retryCount));
+      }
+    }
     
     res.json({ 
       success: true, 
