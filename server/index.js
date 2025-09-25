@@ -8,7 +8,36 @@ const app = express();
 const PORT = process.env.PORT || 8001;
 
 // Middleware
-app.use(cors());
+const allowedOrigins = [
+  'http://localhost:8080',
+  'http://localhost:3000', 
+  'https://suraksha8bot.netlify.app',
+  'https://idyllic-tiramisu-3c3358.netlify.app'
+];
+
+// Add frontend URL from environment if available
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Check if origin is in allowed list or matches netlify pattern
+    if (allowedOrigins.includes(origin) || /\.netlify\.app$/.test(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // MongoDB Connection
