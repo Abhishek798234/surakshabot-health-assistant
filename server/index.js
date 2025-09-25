@@ -37,6 +37,27 @@ app.use('/api/places', placesRoutes);
 app.use('/api/health-alerts', healthAlertsRoutes);
 app.use('/api/appointments', appointmentRoutes);
 
+// Root route - API information
+app.get('/', (req, res) => {
+  res.json({
+    name: 'Surakshabot Health Assistant API',
+    version: '1.0.0',
+    status: 'Running',
+    message: 'Welcome to Surakshabot API! This is the backend service.',
+    endpoints: {
+      health: '/health',
+      healthCheck: '/healthz',
+      users: '/api/users',
+      appointments: '/api/appointments',
+      vaccinations: '/api/vaccination',
+      healthAlerts: '/api/health-alerts',
+      places: '/api/places'
+    },
+    frontend: 'Visit the main website for the chatbot interface',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Health check endpoint for Render
 app.get('/healthz', (req, res) => {
   res.status(200).json({ 
