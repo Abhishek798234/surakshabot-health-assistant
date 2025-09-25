@@ -5,7 +5,7 @@ const User = require('../models/User');
 const OTP = require('../models/OTP');
 
 // Email transporter setup for Render cloud hosting
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 465,
   secure: true,
