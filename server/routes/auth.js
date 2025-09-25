@@ -4,26 +4,22 @@ const nodemailer = require('nodemailer');
 const User = require('../models/User');
 const OTP = require('../models/OTP');
 
-// Email transporter setup - supports Gmail or SendGrid
+// Email transporter setup - optimized for cloud hosting
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.EMAIL_PORT) || 587,
-  secure: false, // Use STARTTLS for port 587
+  service: 'gmail', // Use Gmail service instead of manual SMTP
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
   },
-  connectionTimeout: 120000,
-  greetingTimeout: 60000,
-  socketTimeout: 120000,
-  pool: true,
+  connectionTimeout: 60000, // Reduced timeout
+  greetingTimeout: 30000,
+  socketTimeout: 60000,
+  pool: false, // Disable connection pooling
   maxConnections: 1,
-  rateDelta: 20000,
-  rateLimit: 5,
   tls: {
-    rejectUnauthorized: false
-  },
-  debug: true
+    rejectUnauthorized: false,
+    ciphers: 'SSLv3'
+  }
 });
 
 // Generate 6-digit OTP
@@ -77,13 +73,24 @@ router.post('/send-otp', async (req, res) => {
     
     console.log('🔐 Generated OTP:', otp);
     
+    // Check email configuration
+    console.log('📧 Email config check:');
+    console.log('EMAIL_USER:', process.env.EMAIL_USER ? 'Set' : 'Missing');
+    console.log('EMAIL_PASS:', process.env.EMAIL_PASS ? 'Set' : 'Missing');
+    console.log('EMAIL_HOST:', process.env.EMAIL_HOST);
+    console.log('EMAIL_PORT:', process.env.EMAIL_PORT);
+    
     // Send OTP via email
     if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
       try {
+        // Skip SMTP verification to avoid timeout issues
+        console.log('📧 Attempting to send email directly...');
+        
         const mailOptions = {
           from: `"Surakshabot" <${process.env.EMAIL_USER}>`,
           to: user.email,
           subject: 'Surakshabot Login OTP',
+          text: `Your OTP for Surakshabot login is: ${otp}. This OTP will expire in 5 minutes.`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2 style="color: #6366f1;">Surakshabot Login Verification</h2>
@@ -100,8 +107,9 @@ router.post('/send-otp', async (req, res) => {
           `
         };
         
-        await transporter.sendMail(mailOptions);
-        console.log('📧 OTP email sent to:', user.email);
+        console.log('📧 Sending email to:', user.email);
+        const info = await transporter.sendMail(mailOptions);
+        console.log('✅ Email sent successfully. Message ID:', info.messageId);
         
         res.json({ 
           success: true, 
@@ -110,16 +118,54 @@ router.post('/send-otp', async (req, res) => {
         });
         
       } catch (emailError) {
-        console.error('📧 Email send error:', emailError.message);
-        // Fallback: return OTP in response for development
-        res.json({ 
-          success: true, 
-          message: `Email failed. OTP: ${otp} (Fallback)`,
-          email: user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3'),
-          otp: otp
-        });
+        console.error('❌ Primary email failed:', emailError.message);
+        
+        // Try alternative SMTP configuration
+        try {
+          console.log('🔄 Trying alternative SMTP...');
+          const altTransporter = nodemailer.createTransporter({
+            host: 'smtp.gmail.com',
+            port: 465,
+            secure: true, // Use SSL
+            auth: {
+              user: process.env.EMAIL_USER,
+              pass: process.env.EMAIL_PASS
+            },
+            connectionTimeout: 30000,
+            socketTimeout: 30000
+          });
+          
+          const simpleMailOptions = {
+            from: process.env.EMAIL_USER,
+            to: user.email,
+            subject: 'Surakshabot OTP',
+            text: `Your OTP is: ${otp}. Valid for 5 minutes.`
+          };
+          
+          await altTransporter.sendMail(simpleMailOptions);
+          console.log('✅ Alternative email sent successfully');
+          
+          res.json({ 
+            success: true, 
+            message: `OTP sent to ${user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3')}`,
+            email: user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3')
+          });
+          
+        } catch (altError) {
+          console.error('❌ Alternative email also failed:', altError.message);
+          
+          // Final fallback: return OTP in response
+          res.json({ 
+            success: true, 
+            message: `Email service unavailable. Your OTP is: ${otp}`,
+            email: user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3'),
+            otp: otp,
+            note: 'Please use the OTP shown above'
+          });
+        }
       }
     } else {
+      console.log('⚠️ No email configuration found');
       // No email config, return OTP directly
       res.json({ 
         success: true, 
