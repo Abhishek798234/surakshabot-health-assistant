@@ -1,5 +1,6 @@
 {
   "name": "surakshabot-fullstack",
+  "private": true,
   "version": "1.0.0",
   "description": "Surakshabot Health Assistant - Full Stack Application",
   "main": "server/index.js",
