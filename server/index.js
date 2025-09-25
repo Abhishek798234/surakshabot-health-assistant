@@ -2,47 +2,32 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const cron = require('node-cron');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const app = express();
-const PORT = process.env.PORT || 8001;
+const PORT = process.env.PORT || 8000;
 
-// CORS must be first middleware
-app.use((req, res, next) => {
-  // Set CORS headers for all requests
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  
-  // Handle preflight OPTIONS requests
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
-  
-  next();
-});
-
-// Additional CORS middleware
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
-  credentials: true
-}));
-
+// CORS configuration
+app.use(cors());
 app.use(express.json());
 
+// Serve static files from dist directory
+app.use(express.static(path.join(__dirname, '../dist')));
+
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-}).then(() => {
-  console.log('Connected to MongoDB');
-}).catch((error) => {
-  console.error('MongoDB connection error:', error);
-});
+if (process.env.MONGODB_URI) {
+  mongoose.connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  }).then(() => {
+    console.log('✅ Connected to MongoDB');
+  }).catch((error) => {
+    console.error('❌ MongoDB connection error:', error.message);
+  });
+} else {
+  console.error('❌ MONGODB_URI not found in environment variables');
+}
 
 // Import routes
 const vaccinationRoutes = require('./routes/vaccination');
@@ -52,13 +37,36 @@ const placesRoutes = require('./routes/places');
 const healthAlertsRoutes = require('./routes/healthAlerts');
 const appointmentRoutes = require('./routes/appointments');
 
-// Use routes
+// API routes (must come before static file serving)
 app.use('/api/vaccination', vaccinationRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/places', placesRoutes);
 app.use('/api/health-alerts', healthAlertsRoutes);
 app.use('/api/appointments', appointmentRoutes);
+
+// Health check endpoint
+app.get('/health', async (req, res) => {
+  try {
+    const userCount = await mongoose.connection.db.collection('users').countDocuments();
+    const otpCount = await mongoose.connection.db.collection('otps').countDocuments();
+    
+    res.json({ 
+      status: 'Server is running', 
+      mongodb: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
+      users: userCount,
+      otps: otpCount,
+      timestamp: new Date().toISOString() 
+    });
+  } catch (error) {
+    res.json({ 
+      status: 'Server is running', 
+      mongodb: 'Error',
+      error: error.message,
+      timestamp: new Date().toISOString() 
+    });
+  }
+});
 
 // Test CORS endpoint
 app.get('/test-cors', (req, res) => {
@@ -70,45 +78,16 @@ app.get('/test-cors', (req, res) => {
   });
 });
 
-// Root route - API information
-app.get('/', (req, res) => {
-  res.json({
-    name: 'Surakshabot Health Assistant API',
-    version: '1.0.0',
-    status: 'Running',
-    message: 'Welcome to Surakshabot API! This is the backend service.',
-    endpoints: {
-      health: '/health',
-      healthCheck: '/healthz',
-      users: '/api/users',
-      appointments: '/api/appointments',
-      vaccinations: '/api/vaccination',
-      healthAlerts: '/api/health-alerts',
-      places: '/api/places'
-    },
-    frontend: 'Visit the main website for the chatbot interface',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Health check endpoint for Render
-app.get('/healthz', (req, res) => {
-  res.status(200).json({ 
-    status: 'OK', 
-    message: 'Surakshabot API is running',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
-  });
-});
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'Server is running', timestamp: new Date().toISOString() });
+// Serve frontend for all non-API routes (must be last)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`Backend server running on port ${PORT}`);
+  console.log(`✅ Server running on http://localhost:${PORT}`);
+  console.log(`✅ Frontend: http://localhost:${PORT}`);
+  console.log(`✅ API: http://localhost:${PORT}/api`);
 });
 
 module.exports = app;

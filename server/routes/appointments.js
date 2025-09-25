@@ -5,7 +5,11 @@ const nodemailer = require('nodemailer');
 const cron = require('node-cron');
 const Appointment = require('../models/Appointment');
 
-const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+// Initialize Twilio client only if credentials are available
+let client;
+if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+  client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+}
 
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
@@ -49,14 +53,20 @@ router.post('/schedule', async (req, res) => {
     
     await appointment.save();
     
-    // Send confirmation message
-    const confirmationMessage = `✅ Appointment Scheduled Successfully!\n\nPatient: ${patientName}\nDoctor: Dr. ${doctorName} (${specialty})\nHospital: ${hospitalName}\nDate: ${new Date(appointmentDate).toDateString()}\nTime: ${appointmentTime}\n\nYou will receive a reminder 1 day before your appointment.\n\nAppointment ID: ${appointment._id}`;
-    
-    await client.messages.create({
-      from: process.env.TWILIO_WHATSAPP_NUMBER,
-      to: `whatsapp:${formattedPhone}`,
-      body: confirmationMessage
-    });
+    // Send confirmation message if Twilio is available
+    if (client) {
+      const confirmationMessage = `✅ Appointment Scheduled Successfully!\n\nPatient: ${patientName}\nDoctor: Dr. ${doctorName} (${specialty})\nHospital: ${hospitalName}\nDate: ${new Date(appointmentDate).toDateString()}\nTime: ${appointmentTime}\n\nYou will receive a reminder 1 day before your appointment.\n\nAppointment ID: ${appointment._id}`;
+      
+      try {
+        await client.messages.create({
+          from: process.env.TWILIO_WHATSAPP_NUMBER,
+          to: `whatsapp:${formattedPhone}`,
+          body: confirmationMessage
+        });
+      } catch (twilioError) {
+        console.error('WhatsApp send error:', twilioError);
+      }
+    }
     
     res.json({ 
       success: true, 
@@ -112,13 +122,15 @@ cron.schedule('0 10 * * *', async () => {
     
     for (const appointment of pendingReminders) {
       try {
-        const reminderMessage = `🏥 Appointment Reminder\n\nHello ${appointment.patientName}!\n\nYou have an appointment tomorrow:\n\nDoctor: Dr. ${appointment.doctorName} (${appointment.specialty})\nHospital: ${appointment.hospitalName}\nDate: ${appointment.appointmentDate.toDateString()}\nTime: ${appointment.appointmentTime}\n\nPlease arrive 15 minutes early.\n\nAppointment ID: ${appointment._id}`;
+        if (client) {
+          const reminderMessage = `🏥 Appointment Reminder\n\nHello ${appointment.patientName}!\n\nYou have an appointment tomorrow:\n\nDoctor: Dr. ${appointment.doctorName} (${appointment.specialty})\nHospital: ${appointment.hospitalName}\nDate: ${appointment.appointmentDate.toDateString()}\nTime: ${appointment.appointmentTime}\n\nPlease arrive 15 minutes early.\n\nAppointment ID: ${appointment._id}`;
 
-        await client.messages.create({
-          from: process.env.TWILIO_WHATSAPP_NUMBER,
-          to: `whatsapp:${appointment.phone}`,
-          body: reminderMessage
-        });
+          await client.messages.create({
+            from: process.env.TWILIO_WHATSAPP_NUMBER,
+            to: `whatsapp:${appointment.phone}`,
+            body: reminderMessage
+          });
+        }
         
         appointment.reminderSent = true;
         await appointment.save();

@@ -6,7 +6,11 @@ const cron = require('node-cron');
 const HealthAlert = require('../models/HealthAlert');
 const AlertSubscription = require('../models/AlertSubscription');
 
-const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+// Initialize Twilio client only if credentials are available
+let client;
+if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+  client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+}
 
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
@@ -38,12 +42,16 @@ router.post('/subscribe', async (req, res) => {
     // Send confirmation
     const confirmationMessage = `✅ Health Alert Subscription Activated!\n\nHello ${name},\n\nYou will now receive real-time health alerts for:\n${categories.join(', ')}\n\nNotification methods:\n${preferences.email ? '📧 Email' : ''}${preferences.whatsapp ? '\n📱 WhatsApp' : ''}${preferences.sms ? '\n💬 SMS' : ''}\n\nStay safe and informed!`;
     
-    if (preferences.whatsapp) {
-      await client.messages.create({
-        from: process.env.TWILIO_WHATSAPP_NUMBER,
-        to: `whatsapp:${phone}`,
-        body: confirmationMessage
-      });
+    if (preferences.whatsapp && client) {
+      try {
+        await client.messages.create({
+          from: process.env.TWILIO_WHATSAPP_NUMBER,
+          to: `whatsapp:${phone}`,
+          body: confirmationMessage
+        });
+      } catch (twilioError) {
+        console.error('WhatsApp send error:', twilioError);
+      }
     }
     
     res.json({ success: true, message: 'Successfully subscribed to health alerts' });
@@ -124,7 +132,7 @@ const sendAlertNotifications = async (alert) => {
       const alertMessage = `🚨 ${alert.severity} HEALTH ALERT\n\n${alert.title}\n\n${alert.description}\n\nLocation: ${alert.location.state}${alert.location.district ? `, ${alert.location.district}` : ''}\n\nSource: ${alert.source}\n\nStay safe and follow health guidelines.`;
       
       // Send WhatsApp notification
-      if (subscription.preferences.whatsapp) {
+      if (subscription.preferences.whatsapp && client) {
         try {
           await client.messages.create({
             from: process.env.TWILIO_WHATSAPP_NUMBER,
@@ -168,7 +176,7 @@ const sendAlertNotifications = async (alert) => {
       }
       
       // Send SMS notification
-      if (subscription.preferences.sms) {
+      if (subscription.preferences.sms && client) {
         try {
           await client.messages.create({
             from: process.env.TWILIO_PHONE_NUMBER || '+1234567890',

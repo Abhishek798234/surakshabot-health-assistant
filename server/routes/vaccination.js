@@ -4,8 +4,14 @@ const twilio = require('twilio');
 const cron = require('node-cron');
 const Vaccination = require('../models/Vaccination');
 
-// Initialize Twilio client
-const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+// Initialize Twilio client only if credentials are available
+let client;
+if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+  client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+  console.log('✅ Twilio initialized');
+} else {
+  console.log('⚠️ Twilio disabled (credentials not found)');
+}
 
 // Format phone number to international format
 const formatPhoneNumber = (phone) => {
@@ -45,8 +51,9 @@ router.post('/schedule', async (req, res) => {
     
     await vaccination.save();
     
-    // Send immediate WhatsApp confirmation
-    const confirmationMessage = `✅ Vaccination reminder scheduled successfully!
+    // Send immediate WhatsApp confirmation if Twilio is available
+    if (client) {
+      const confirmationMessage = `✅ Vaccination reminder scheduled successfully!
 
 Child: ${name}
 Vaccine: ${vaccine}
@@ -55,11 +62,16 @@ Reminder Time: ${reminderTime}
 
 You will receive a reminder one day before the due date. Please consult with a healthcare provider for proper vaccination guidance.`;
 
-    await client.messages.create({
-      from: process.env.TWILIO_WHATSAPP_NUMBER,
-      to: `whatsapp:${formattedPhone}`,
-      body: confirmationMessage
-    });
+      try {
+        await client.messages.create({
+          from: process.env.TWILIO_WHATSAPP_NUMBER,
+          to: `whatsapp:${formattedPhone}`,
+          body: confirmationMessage
+        });
+      } catch (twilioError) {
+        console.error('WhatsApp send error:', twilioError);
+      }
+    }
     
     res.json({ 
       success: true, 
@@ -110,7 +122,8 @@ cron.schedule('0 9 * * *', async () => {
     
     for (const vaccination of pendingReminders) {
       try {
-        const reminderMessage = `🩹 Vaccination Reminder
+        if (client) {
+          const reminderMessage = `🩹 Vaccination Reminder
 
 Hello! This is a reminder that ${vaccination.name}'s ${vaccination.vaccine} vaccination is due tomorrow (${vaccination.dueDate.toDateString()}).
 
@@ -118,11 +131,12 @@ Please visit your healthcare provider at the scheduled time: ${vaccination.remin
 
 Stay healthy! 💙`;
 
-        await client.messages.create({
-          from: process.env.TWILIO_WHATSAPP_NUMBER,
-          to: `whatsapp:${vaccination.phone}`,
-          body: reminderMessage
-        });
+          await client.messages.create({
+            from: process.env.TWILIO_WHATSAPP_NUMBER,
+            to: `whatsapp:${vaccination.phone}`,
+            body: reminderMessage
+          });
+        }
         
         // Mark as sent
         vaccination.reminderSent = true;

@@ -21,7 +21,7 @@ const Login = () => {
 
     try {
       const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
-      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8001';
+      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
       
       const response = await fetch(`${BACKEND_URL}/api/auth/send-otp`, {
         method: 'POST',
@@ -52,7 +52,7 @@ const Login = () => {
 
     try {
       const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
-      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8001';
+      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
       
       const response = await fetch(`${BACKEND_URL}/api/auth/verify-otp`, {
         method: 'POST',
