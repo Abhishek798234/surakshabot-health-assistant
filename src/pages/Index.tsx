@@ -17,11 +17,11 @@ const Index = () => {
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
 
   return (
-    <div className="min-h-screen relative">
+    <div className="min-h-screen relative safe-area-inset touch-manipulation">
       <FloatingEmojis />
       
       {/* Main Website Layout */}
-      <div className="relative z-10">
+      <div className="relative z-10 mobile-scroll">
         <HealthWebsiteHeader onOpenChatbot={() => setIsChatbotOpen(true)} />
         <HealthHeroSection onOpenChatbot={() => setIsChatbotOpen(true)} />
         <AboutSection />
@@ -33,7 +33,7 @@ const Index = () => {
               <h2 className="text-3xl font-bold mb-4 medical-accent">Our Health Services</h2>
               <p className="text-foreground/70 mb-8">Comprehensive AI-powered health assistance at your fingertips</p>
               
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                 {services.map((service) => (
                   <div key={service.title} className="glass-card p-6">
                     <h3 className="font-semibold mb-2 medical-accent">{service.title}</h3>

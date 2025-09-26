@@ -52,10 +52,10 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center p-4">
+    <div className="min-h-screen relative flex items-center justify-center p-4 safe-area-inset touch-manipulation">
       <FloatingEmojis />
       
-      <div className="relative z-10 w-full max-w-md">
+      <div className="relative z-10 w-full max-w-md sm:max-w-lg">
         <Card className="glass-card">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold medical-accent">
@@ -78,7 +78,8 @@ const Register = () => {
                   value={formData.name}
                   onChange={handleChange}
                   required
-                  className="glass-input"
+                  className="glass-input text-base sm:text-sm"
+                  autoComplete="name"
                 />
               </div>
               
@@ -92,7 +93,9 @@ const Register = () => {
                   value={formData.phone}
                   onChange={handleChange}
                   required
-                  className="glass-input"
+                  className="glass-input text-base sm:text-sm"
+                  autoComplete="tel"
+                  inputMode="tel"
                 />
                 <p className="text-xs text-foreground/60">
                   Include country code for WhatsApp notifications
@@ -109,7 +112,9 @@ const Register = () => {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="glass-input"
+                  className="glass-input text-base sm:text-sm"
+                  autoComplete="email"
+                  inputMode="email"
                 />
               </div>
               
