@@ -21,9 +21,7 @@ const Login = () => {
 
     try {
       const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
-      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
-      
-      const response = await fetch(`${BACKEND_URL}/api/auth/send-otp`, {
+      const response = await fetch('/api/auth/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: cleanPhone })
@@ -59,9 +57,7 @@ const Login = () => {
 
     try {
       const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
-      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
-      
-      const response = await fetch(`${BACKEND_URL}/api/auth/verify-otp`, {
+      const response = await fetch('/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: cleanPhone, otp })

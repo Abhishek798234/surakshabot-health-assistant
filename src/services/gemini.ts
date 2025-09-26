@@ -3,7 +3,7 @@ import { translationService } from './translation';
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
+const BACKEND_URL = '';
 
 const getDoctorPrompt = (language: string) => {
   const prompts: { [key: string]: string } = {
@@ -85,7 +85,7 @@ export const generateGeminiResponse = async (message: string, phone?: string): P
   // Get user context if phone is provided
   if (phone) {
     try {
-      const userResponse = await fetch(`${BACKEND_URL}/api/users/${phone}`);
+      const userResponse = await fetch(`/api/users/${phone}`);
       const userData = await userResponse.json();
       if (userData.success && userData.user) {
         user = userData.user;
@@ -115,7 +115,7 @@ export const generateGeminiResponse = async (message: string, phone?: string): P
     try {
       const [, patientName, doctorName, specialty, hospitalName, appointmentDate, appointmentTime] = appointmentMatch;
       
-      const response = await fetch(`${BACKEND_URL}/api/appointments/schedule`, {
+      const response = await fetch('/api/appointments/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -148,7 +148,7 @@ export const generateGeminiResponse = async (message: string, phone?: string): P
   if (message.toLowerCase().includes('appointment alerts') || message.toLowerCase().includes('show my appointments')) {
     if (user) {
       try {
-        const response = await fetch(`${BACKEND_URL}/api/appointments/${user.phone}`);
+        const response = await fetch(`/api/appointments/${user.phone}`);
         const appointmentData = await response.json();
         
         if (appointmentData.success && appointmentData.appointments.length > 0) {
@@ -203,7 +203,7 @@ export const generateGeminiResponse = async (message: string, phone?: string): P
       }
       
       // Call vaccination API to save and send WhatsApp
-      const vacResponse = await fetch(`${BACKEND_URL}/api/vaccination/schedule`, {
+      const vacResponse = await fetch('/api/vaccination/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -317,7 +317,7 @@ export const generateGeminiResponse = async (message: string, phone?: string): P
 // Create or get user
 export const createOrGetUser = async (name: string, phone: string, email?: string) => {
   try {
-    const response = await fetch(`${BACKEND_URL}/api/users`, {
+    const response = await fetch('/api/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, phone, email })
