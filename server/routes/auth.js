@@ -1,54 +1,21 @@
 const express = require('express');
 const router = express.Router();
-const emailjs = require('@emailjs/nodejs');
+const nodemailer = require('nodemailer');
 const User = require('../models/User');
 const OTP = require('../models/OTP');
 
-// EmailJS configuration
-const emailConfig = {
-  serviceId: process.env.EMAILJS_SERVICE_ID || 'service_surakshabot',
-  templateId: process.env.EMAILJS_TEMPLATE_ID || 'template_otp',
-  publicKey: process.env.EMAILJS_PUBLIC_KEY,
-  privateKey: process.env.EMAILJS_PRIVATE_KEY
-};
-
-console.log('✅ EmailJS configured for OTP sending');
-
-// Test EmailJS connection
-router.get('/test-email', async (req, res) => {
-  try {
-    const testParams = {
-      to_email: 'test@example.com',
-      to_name: 'Test User',
-      otp_code: '123456',
-      from_name: 'Surakshabot Team'
-    };
-    
-    console.log('🧪 Testing EmailJS configuration...');
-    console.log('Service ID:', emailConfig.serviceId);
-    console.log('Template ID:', emailConfig.templateId);
-    console.log('Public Key:', emailConfig.publicKey ? 'Present' : 'Missing');
-    console.log('Private Key:', emailConfig.privateKey ? 'Present' : 'Missing');
-    
-    res.json({
-      success: true,
-      message: 'EmailJS configuration check',
-      config: {
-        serviceId: emailConfig.serviceId,
-        templateId: emailConfig.templateId,
-        publicKeySet: !!emailConfig.publicKey,
-        privateKeySet: !!emailConfig.privateKey
-      }
-    });
-    
-  } catch (error) {
-    console.error('❌ EmailJS test error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+// Gmail SMTP configuration
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS
   }
 });
+
+console.log('✅ Gmail SMTP configured for OTP sending');
+
+
 
 // Generate 6-digit OTP
 const generateOTP = () => {
@@ -101,35 +68,30 @@ router.post('/send-otp', async (req, res) => {
     
     console.log('🔐 Generated OTP:', otp);
     
-    // Check EmailJS configuration
-    console.log('📧 EmailJS config check:');
-    console.log('Service ID:', emailConfig.serviceId ? 'Set' : 'Missing');
-    console.log('Template ID:', emailConfig.templateId ? 'Set' : 'Missing');
-    console.log('Public Key:', emailConfig.publicKey ? 'Set' : 'Missing');
-    console.log('Private Key:', emailConfig.privateKey ? 'Set' : 'Missing');
-    
-    // Send OTP via EmailJS
+    // Send OTP via Gmail SMTP
     try {
-      const templateParams = {
-        to_email: user.email,
-        to_name: user.name,
-        otp_code: otp,
-        from_name: 'Surakshabot Team'
+      const mailOptions = {
+        from: `"Surakshabot" <${process.env.SMTP_USER}>`,
+        to: user.email,
+        subject: 'Surakshabot Login OTP',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #6366f1; text-align: center;">Surakshabot Login OTP</h2>
+            <p>Hello ${user.name},</p>
+            <p>Your OTP for login is:</p>
+            <div style="background: #f3f4f6; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
+              <h1 style="color: #6366f1; font-size: 32px; margin: 0; letter-spacing: 3px;">${otp}</h1>
+            </div>
+            <p>This OTP will expire in 5 minutes.</p>
+            <p>If you didn't request this, please ignore this email.</p>
+            <p>Best regards,<br>Surakshabot Team</p>
+          </div>
+        `
       };
       
-      console.log('📧 Sending OTP email via EmailJS to:', user.email);
-      
-      const response = await emailjs.send(
-        emailConfig.serviceId,
-        emailConfig.templateId,
-        templateParams,
-        {
-          publicKey: emailConfig.publicKey,
-          privateKey: emailConfig.privateKey
-        }
-      );
-      
-      console.log('✅ Email sent successfully via EmailJS:', response.status);
+      console.log('📧 Sending OTP email to:', user.email);
+      await transporter.sendMail(mailOptions);
+      console.log('✅ Email sent successfully');
       
       res.json({
         success: true,
@@ -138,15 +100,14 @@ router.post('/send-otp', async (req, res) => {
       });
       
     } catch (emailError) {
-      console.error('❌ EmailJS sending failed:', emailError);
+      console.error('❌ Email sending failed:', emailError.message);
       
       // Fallback: return OTP in response
       res.json({
         success: true,
-        message: `Email service unavailable. Your OTP: ${otp}`,
+        message: `Email failed. Your OTP: ${otp}`,
         email: user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3'),
-        otp: otp,
-        note: 'Use the OTP above to login'
+        otp: otp
       });
     }
     

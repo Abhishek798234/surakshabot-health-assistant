@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const twilio = require('twilio');
-const emailjs = require('@emailjs/nodejs');
+const nodemailer = require('nodemailer');
 const cron = require('node-cron');
 const HealthAlert = require('../models/HealthAlert');
 const AlertSubscription = require('../models/AlertSubscription');
@@ -12,13 +12,14 @@ if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
   client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 }
 
-// EmailJS configuration for health alerts
-const emailConfig = {
-  serviceId: process.env.EMAILJS_SERVICE_ID,
-  templateId: process.env.EMAILJS_TEMPLATE_ID,
-  publicKey: process.env.EMAILJS_PUBLIC_KEY,
-  privateKey: process.env.EMAILJS_PRIVATE_KEY
-};
+// Gmail SMTP configuration
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS
+  }
+});
 
 // Subscribe to health alerts
 router.post('/subscribe', async (req, res) => {
@@ -142,30 +143,34 @@ const sendAlertNotifications = async (alert) => {
         }
       }
       
-      // Send Email notification via EmailJS
-      if (subscription.preferences.email && subscription.email && emailConfig.serviceId) {
+      // Send Email notification
+      if (subscription.preferences.email && subscription.email) {
         try {
-          const templateParams = {
-            to_email: subscription.email,
-            to_name: subscription.name,
-            alert_title: alert.title,
-            alert_description: alert.description,
-            alert_severity: alert.severity,
-            alert_location: `${alert.location.state}${alert.location.district ? `, ${alert.location.district}` : ''}`,
-            from_name: 'Surakshabot Health Alert System'
+          const mailOptions = {
+            from: `"Surakshabot" <${process.env.SMTP_USER}>`,
+            to: subscription.email,
+            subject: `🚨 ${alert.severity} Health Alert: ${alert.title}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <div style="background: ${alert.severity === 'CRITICAL' ? '#dc2626' : alert.severity === 'HIGH' ? '#ea580c' : '#d97706'}; color: white; padding: 20px; text-align: center;">
+                  <h1>🚨 ${alert.severity} HEALTH ALERT</h1>
+                </div>
+                <div style="padding: 20px;">
+                  <h2>${alert.title}</h2>
+                  <p>${alert.description}</p>
+                  <p><strong>Location:</strong> ${alert.location.state}${alert.location.district ? `, ${alert.location.district}` : ''}</p>
+                </div>
+                <div style="background: #f3f4f6; padding: 15px; text-align: center;">
+                  <p>Stay safe and follow health guidelines.</p>
+                  <p><small>Surakshabot Health Alert System</small></p>
+                </div>
+              </div>
+            `
           };
           
-          await emailjs.send(
-            emailConfig.serviceId,
-            emailConfig.templateId,
-            templateParams,
-            {
-              publicKey: emailConfig.publicKey,
-              privateKey: emailConfig.privateKey
-            }
-          );
+          await transporter.sendMail(mailOptions);
         } catch (error) {
-          console.error(`EmailJS error for ${subscription.email}:`, error);
+          console.error(`Email error for ${subscription.email}:`, error);
         }
       }
       
