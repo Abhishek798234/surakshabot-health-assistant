@@ -4,39 +4,23 @@ const nodemailer = require('nodemailer');
 const User = require('../models/User');
 const OTP = require('../models/OTP');
 
-// Email transporter setup - multiple fallback configurations
-const createTransporter = () => {
-  // Primary: Gmail service
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-    },
-    pool: false,
-    maxConnections: 1,
-    rateDelta: 20000,
-    rateLimit: 5
-  });
-};
+// Email transporter using Gmail SMTP (matching working project)
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.SMTP_USER || 'surakshabot8@gmail.com',
+    pass: process.env.SMTP_PASS || 'fchyaishxyslmhtv'
+  }
+});
 
-const createBackupTransporter = () => {
-  // Backup: Direct SMTP
-  return nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-    },
-    tls: {
-      rejectUnauthorized: false
-    }
-  });
-};
-
-const transporter = createTransporter();
+// Test email configuration on startup
+transporter.verify((error, success) => {
+  if (error) {
+    console.log('❌ Email configuration error:', error.message);
+  } else {
+    console.log('✅ Email server is ready to send messages');
+  }
+});
 
 // Generate 6-digit OTP
 const generateOTP = () => {
@@ -96,85 +80,67 @@ router.post('/send-otp', async (req, res) => {
     console.log('EMAIL_HOST:', process.env.EMAIL_HOST);
     console.log('EMAIL_PORT:', process.env.EMAIL_PORT);
     
-    // Send OTP via email with multiple attempts
-    let emailSent = false;
-    let finalResponse;
-    
-    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+    // Send OTP via email (matching working project flow)
+    try {
       const mailOptions = {
-        from: process.env.EMAIL_USER,
+        from: process.env.FROM_EMAIL || '"Suraksha Bot <surakshabot8@gmail.com>"',
         to: user.email,
         subject: 'Surakshabot Login OTP',
-        text: `Your OTP for Surakshabot login is: ${otp}. This OTP will expire in 5 minutes.`,
-        html: `<h2>Surakshabot Login OTP</h2><p>Hello ${user.name},</p><p>Your OTP is: <strong>${otp}</strong></p><p>This OTP will expire in 5 minutes.</p>`
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; text-align: center; color: white;">
+              <h1 style="margin: 0; font-size: 28px;">Suraksha Bot</h1>
+              <p style="margin: 10px 0 0 0; opacity: 0.9;">Your Health Assistant</p>
+            </div>
+            
+            <div style="background: white; padding: 30px; border-radius: 10px; margin-top: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+              <h2 style="color: #333; margin-top: 0;">Hello ${user.name},</h2>
+              <p style="color: #666; font-size: 16px; line-height: 1.5;">Your OTP for login verification is:</p>
+              
+              <div style="background: #f8f9fa; border: 2px dashed #667eea; padding: 20px; text-align: center; margin: 25px 0; border-radius: 8px;">
+                <h1 style="color: #667eea; font-size: 36px; margin: 0; letter-spacing: 5px; font-family: monospace;">${otp}</h1>
+              </div>
+              
+              <p style="color: #666; font-size: 14px; line-height: 1.5;">
+                <strong>Important:</strong> This OTP will expire in <strong>10 minutes</strong>. 
+                Please do not share this code with anyone for your security.
+              </p>
+              
+              <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; text-align: center;">
+                <p style="color: #999; font-size: 12px; margin: 0;">
+                  If you didn't request this OTP, please ignore this email.
+                </p>
+                <p style="color: #667eea; font-size: 14px; margin: 10px 0 0 0; font-weight: bold;">
+                  Suraksha Bot Team
+                </p>
+              </div>
+            </div>
+          </div>
+        `
       };
       
-      // Try primary transporter
-      try {
-        console.log('📧 Attempting primary email send to:', user.email);
-        await transporter.sendMail(mailOptions);
-        console.log('✅ Primary email sent successfully');
-        emailSent = true;
-      } catch (primaryError) {
-        console.error('❌ Primary email failed:', primaryError.message);
-        
-        // Try backup transporter
-        try {
-          console.log('🔄 Trying backup SMTP...');
-          const backupTransporter = createBackupTransporter();
-          await backupTransporter.sendMail(mailOptions);
-          console.log('✅ Backup email sent successfully');
-          emailSent = true;
-        } catch (backupError) {
-          console.error('❌ Backup email failed:', backupError.message);
-          
-          // Try simple configuration
-          try {
-            console.log('🔄 Trying simple SMTP...');
-            const simpleTransporter = nodemailer.createTransport({
-              host: 'smtp.gmail.com',
-              port: 465,
-              secure: true,
-              auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS
-              }
-            });
-            
-            await simpleTransporter.sendMail({
-              from: process.env.EMAIL_USER,
-              to: user.email,
-              subject: 'OTP',
-              text: `Your OTP: ${otp}`
-            });
-            console.log('✅ Simple email sent successfully');
-            emailSent = true;
-          } catch (simpleError) {
-            console.error('❌ All email methods failed:', simpleError.message);
-          }
-        }
-      }
-    }
-    
-    // Send response based on email success
-    if (emailSent) {
-      finalResponse = {
+      console.log('📧 Sending OTP email to:', user.email);
+      const info = await transporter.sendMail(mailOptions);
+      console.log('✅ Email sent successfully. Message ID:', info.messageId);
+      
+      res.json({
         success: true,
         message: `OTP sent to ${user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3')}`,
         email: user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3')
-      };
-    } else {
-      console.log('⚠️ Email failed, returning OTP directly');
-      finalResponse = {
+      });
+      
+    } catch (emailError) {
+      console.error('❌ Email sending failed:', emailError.message);
+      
+      // Fallback: return OTP in response
+      res.json({
         success: true,
-        message: `Email unavailable. Your OTP: ${otp}`,
+        message: `Email failed. Your OTP: ${otp}`,
         email: user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3'),
         otp: otp,
-        emailFailed: true
-      };
+        emailError: emailError.message
+      });
     }
-    
-    res.json(finalResponse);
     
   } catch (error) {
     console.error('❌ Send OTP error:', error);
