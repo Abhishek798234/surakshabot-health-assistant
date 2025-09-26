@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const twilio = require('twilio');
-const nodemailer = require('nodemailer');
+const emailjs = require('@emailjs/nodejs');
 const cron = require('node-cron');
 const Appointment = require('../models/Appointment');
 
@@ -11,15 +11,13 @@ if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
   client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 }
 
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: process.env.EMAIL_PORT,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-});
+// EmailJS configuration for appointments
+const emailConfig = {
+  serviceId: process.env.EMAILJS_SERVICE_ID,
+  templateId: process.env.EMAILJS_TEMPLATE_ID,
+  publicKey: process.env.EMAILJS_PUBLIC_KEY,
+  privateKey: process.env.EMAILJS_PRIVATE_KEY
+};
 
 // Format phone number to international format
 const formatPhoneNumber = (phone) => {

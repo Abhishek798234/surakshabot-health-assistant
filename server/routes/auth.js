@@ -14,12 +14,48 @@ const emailConfig = {
 
 console.log('✅ EmailJS configured for OTP sending');
 
+// Test EmailJS connection
+router.get('/test-email', async (req, res) => {
+  try {
+    const testParams = {
+      to_email: 'test@example.com',
+      to_name: 'Test User',
+      otp_code: '123456',
+      from_name: 'Surakshabot Team'
+    };
+    
+    console.log('🧪 Testing EmailJS configuration...');
+    console.log('Service ID:', emailConfig.serviceId);
+    console.log('Template ID:', emailConfig.templateId);
+    console.log('Public Key:', emailConfig.publicKey ? 'Present' : 'Missing');
+    console.log('Private Key:', emailConfig.privateKey ? 'Present' : 'Missing');
+    
+    res.json({
+      success: true,
+      message: 'EmailJS configuration check',
+      config: {
+        serviceId: emailConfig.serviceId,
+        templateId: emailConfig.templateId,
+        publicKeySet: !!emailConfig.publicKey,
+        privateKeySet: !!emailConfig.privateKey
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ EmailJS test error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Generate 6-digit OTP
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// SMTP connection will be verified when needed
+
 
 // Send OTP to email
 router.post('/send-otp', async (req, res) => {
@@ -65,12 +101,12 @@ router.post('/send-otp', async (req, res) => {
     
     console.log('🔐 Generated OTP:', otp);
     
-    // Check email configuration
-    console.log('📧 Email config check:');
-    console.log('EMAIL_USER:', process.env.EMAIL_USER ? 'Set' : 'Missing');
-    console.log('EMAIL_PASS:', process.env.EMAIL_PASS ? 'Set' : 'Missing');
-    console.log('EMAIL_HOST:', process.env.EMAIL_HOST);
-    console.log('EMAIL_PORT:', process.env.EMAIL_PORT);
+    // Check EmailJS configuration
+    console.log('📧 EmailJS config check:');
+    console.log('Service ID:', emailConfig.serviceId ? 'Set' : 'Missing');
+    console.log('Template ID:', emailConfig.templateId ? 'Set' : 'Missing');
+    console.log('Public Key:', emailConfig.publicKey ? 'Set' : 'Missing');
+    console.log('Private Key:', emailConfig.privateKey ? 'Set' : 'Missing');
     
     // Send OTP via EmailJS
     try {
