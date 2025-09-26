@@ -34,7 +34,14 @@ const Login = () => {
       if (result.success) {
         setMaskedEmail(result.email);
         setStep(2);
-        toast.success(`OTP sent to ${result.email}`);
+        
+        if (result.otp) {
+          // Email failed, show OTP directly
+          toast.success(`${result.message}`, { duration: 10000 });
+        } else {
+          // Email sent successfully
+          toast.success(`OTP sent to ${result.email}`);
+        }
       } else {
         toast.error(result.error || "Failed to send OTP");
       }
