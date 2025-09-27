@@ -46,6 +46,7 @@ app.use('/api/places', placesRoutes);
 app.use('/api/health-alerts', healthAlertsRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/sms', require('./routes/sms'));
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
