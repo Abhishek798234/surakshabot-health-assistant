@@ -33,10 +33,13 @@ router.post('/test-webhook', (req, res) => {
 // WhatsApp message webhook (POST request from Twilio)
 router.post('/webhook', async (req, res) => {
   try {
-    console.log('🔥 WHATSAPP WEBHOOK RECEIVED');
-    console.log('Body:', JSON.stringify(req.body, null, 2));
+    console.log('\n\n🔥🔥🔥 WHATSAPP WEBHOOK HIT 🔥🔥🔥');
+    console.log('Timestamp:', new Date().toISOString());
     console.log('Method:', req.method);
     console.log('URL:', req.url);
+    console.log('Headers:', JSON.stringify(req.headers, null, 2));
+    console.log('Body:', JSON.stringify(req.body, null, 2));
+    console.log('🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥\n\n');
     
     const { Body: messageBody, From: fromNumber, To: toNumber, ProfileName: userName } = req.body;
     
