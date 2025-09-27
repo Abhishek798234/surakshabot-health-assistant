@@ -64,7 +64,7 @@ router.post('/webhook', async (req, res) => {
     // Skip Twilio system notifications and error reports
     if (req.body.Level || req.body.Payload || req.body.PayloadType) {
       console.log('🤖 Ignoring Twilio system notification');
-      return res.status(200).send('OK');
+      return res.status(200).type('text/xml').send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
     }
     
     // Extract Twilio SMS data
@@ -79,7 +79,7 @@ router.post('/webhook', async (req, res) => {
     
     if (!messageBody || !fromNumber) {
       console.log('⚠️ Empty message or missing sender, ignoring');
-      return res.status(200).send('OK');
+      return res.status(200).type('text/xml').send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
     }
 
     // Extract phone number (remove any prefixes)
@@ -263,13 +263,13 @@ For immediate medical emergencies, please contact your local emergency services.
       console.log('SMS number set:', !!process.env.TWILIO_SMS_NUMBER);
     }
     
-    // Always respond with 200 to Twilio
-    console.log('🔥 Sending OK response to Twilio');
-    res.status(200).send('OK');
+    // Always respond with 200 and empty TwiML to Twilio
+    console.log('🔥 Sending TwiML response to Twilio');
+    res.status(200).type('text/xml').send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
     
   } catch (error) {
     console.error('❌ SMS webhook error:', error);
-    res.status(200).send('OK'); // Still return 200 to avoid Twilio retries
+    res.status(200).type('text/xml').send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>'); // Return valid TwiML
   }
 });
 
