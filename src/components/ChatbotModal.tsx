@@ -57,6 +57,7 @@ export const ChatbotModal = ({ isOpen, onClose }: ChatbotModalProps) => {
     return savedUser ? JSON.parse(savedUser) : null;
   });
   const [showLocationPermission, setShowLocationPermission] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -278,46 +279,75 @@ export const ChatbotModal = ({ isOpen, onClose }: ChatbotModalProps) => {
           </div>
 
           {/* Chat Interface */}
-          <div className="flex-1 flex flex-col lg:flex-row gap-6 p-6 overflow-hidden">
-            {/* Main Dark Chat */}
-            <div className="flex-1 flex flex-col min-h-0">
-              <ChatHeader />
-              
-              <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-4">
-                {messages.map((message) => (
-                  <div key={message.id}>
-                    <ChatBubble
-                      message={message.text}
-                      isUser={message.isUser}
-                      timestamp={message.timestamp}
-                    />
-                    {message.facilities && (
-                      <div className="mt-3 space-y-2">
-                        {message.facilities.map((facility, index) => (
-                          <MedicalFacilityCard
-                            key={facility.placeId}
-                            facility={facility}
-                            index={index}
-                          />
-                        ))}
-                        <div className="text-xs text-foreground/60 mt-3 p-3 glass-card">
-                          💡 Tip: Click "View on Maps" to get directions and more details.<br/>
-                          ⚠️ In case of emergency, call your local emergency number immediately.
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {isTyping && <TypingIndicator />}
-                <div ref={messagesEndRef} />
-              </div>
-
-              <ChatInput onSendMessage={handleSendMessage} isLoading={isTyping} />
+          <div className="flex-1 flex flex-col overflow-hidden relative">
+            {/* Hamburger Menu Button */}
+            <div className="absolute top-4 right-4 z-20">
+              <button
+                onClick={() => setShowSidebar(!showSidebar)}
+                className="p-3 glass-card hover:bg-medical-primary/20 transition-all duration-300 group"
+                aria-label="Toggle menu"
+              >
+                <div className="w-6 h-6 flex flex-col justify-center items-center">
+                  <span className={`block w-6 h-0.5 bg-foreground transition-all duration-300 ${showSidebar ? 'rotate-45 translate-y-1.5' : ''}`}></span>
+                  <span className={`block w-6 h-0.5 bg-foreground mt-1 transition-all duration-300 ${showSidebar ? 'opacity-0' : ''}`}></span>
+                  <span className={`block w-6 h-0.5 bg-foreground mt-1 transition-all duration-300 ${showSidebar ? '-rotate-45 -translate-y-1.5' : ''}`}></span>
+                </div>
+              </button>
             </div>
 
-            {/* Light Purple Chat Box */}
-            <div className="w-full lg:w-96 flex-shrink-0">
-              <LightPurpleChatBox onButtonClick={handleQuickAction} />
+            <div className="flex-1 flex overflow-hidden">
+              {/* Main Dark Chat */}
+              <div className="flex-1 flex flex-col min-h-0">
+                <ChatHeader />
+                
+                <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-4">
+                  {messages.map((message) => (
+                    <div key={message.id}>
+                      <ChatBubble
+                        message={message.text}
+                        isUser={message.isUser}
+                        timestamp={message.timestamp}
+                      />
+                      {message.facilities && (
+                        <div className="mt-3 space-y-2">
+                          {message.facilities.map((facility, index) => (
+                            <MedicalFacilityCard
+                              key={facility.placeId}
+                              facility={facility}
+                              index={index}
+                            />
+                          ))}
+                          <div className="text-xs text-foreground/60 mt-3 p-3 glass-card">
+                            💡 Tip: Click "View on Maps" to get directions and more details.<br/>
+                            ⚠️ In case of emergency, call your local emergency number immediately.
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {isTyping && <TypingIndicator />}
+                  <div ref={messagesEndRef} />
+                </div>
+
+                <ChatInput onSendMessage={handleSendMessage} isLoading={isTyping} />
+              </div>
+
+              {/* Sliding Sidebar - Light Purple Chat Box */}
+              <div className={`fixed top-0 right-0 h-full w-96 bg-background/95 backdrop-blur-sm border-l border-glass-border/20 transform transition-transform duration-300 ease-in-out z-10 ${
+                showSidebar ? 'translate-x-0' : 'translate-x-full'
+              }`}>
+                <div className="h-full p-6 pt-20">
+                  <LightPurpleChatBox onButtonClick={handleQuickAction} />
+                </div>
+              </div>
+
+              {/* Overlay */}
+              {showSidebar && (
+                <div 
+                  className="fixed inset-0 bg-black/20 backdrop-blur-sm z-5 transition-opacity duration-300"
+                  onClick={() => setShowSidebar(false)}
+                />
+              )}
             </div>
           </div>
         </div>
