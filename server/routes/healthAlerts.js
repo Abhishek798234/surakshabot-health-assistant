@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const twilio = require('twilio');
-const nodemailer = require('nodemailer');
+const sgMail = require('@sendgrid/mail');
 const cron = require('node-cron');
 const HealthAlert = require('../models/HealthAlert');
 const AlertSubscription = require('../models/AlertSubscription');
@@ -12,19 +12,11 @@ if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
   client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 }
 
-// Multi-provider SMTP configuration
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp-mail.outlook.com',
-  port: parseInt(process.env.SMTP_PORT) || 587,
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
-  },
-  tls: {
-    ciphers: 'SSLv3'
-  }
-});
+// SendGrid configuration
+if (process.env.SENDGRID_API_KEY) {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+  console.log('✅ SendGrid configured for health alerts');
+}
 
 // Subscribe to health alerts
 router.post('/subscribe', async (req, res) => {
@@ -148,12 +140,12 @@ const sendAlertNotifications = async (alert) => {
         }
       }
       
-      // Send Email notification
-      if (subscription.preferences.email && subscription.email) {
+      // Send Email notification via SendGrid
+      if (subscription.preferences.email && subscription.email && process.env.SENDGRID_API_KEY) {
         try {
-          const mailOptions = {
-            from: process.env.SMTP_USER,
+          const msg = {
             to: subscription.email,
+            from: process.env.FROM_EMAIL || 'surakshabot8@gmail.com',
             subject: `🚨 ${alert.severity} Health Alert: ${alert.title}`,
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -173,9 +165,9 @@ const sendAlertNotifications = async (alert) => {
             `
           };
           
-          await transporter.sendMail(mailOptions);
+          await sgMail.send(msg);
         } catch (error) {
-          console.error(`Email error for ${subscription.email}:`, error);
+          console.error(`SendGrid error for ${subscription.email}:`, error);
         }
       }
       
