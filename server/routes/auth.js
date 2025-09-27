@@ -4,19 +4,40 @@ const nodemailer = require('nodemailer');
 const User = require('../models/User');
 const OTP = require('../models/OTP');
 
-// Gmail SMTP configuration with enhanced settings
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
-  },
-  tls: {
-    rejectUnauthorized: false
+// Multi-provider SMTP configuration
+const createTransporter = () => {
+  // Try Outlook first (more reliable on cloud platforms)
+  if (process.env.SMTP_HOST === 'smtp-mail.outlook.com') {
+    return nodemailer.createTransport({
+      host: 'smtp-mail.outlook.com',
+      port: 587,
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+      },
+      tls: {
+        ciphers: 'SSLv3'
+      }
+    });
   }
-});
+  
+  // Fallback to Gmail
+  return nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS
+    },
+    tls: {
+      rejectUnauthorized: false
+    }
+  });
+};
+
+const transporter = createTransporter();
 
 // Test SMTP connection on startup
 transporter.verify((error, success) => {
@@ -27,7 +48,7 @@ transporter.verify((error, success) => {
   }
 });
 
-console.log('✅ Gmail SMTP configured for OTP sending');
+console.log('✅ SMTP configured for OTP sending:', process.env.SMTP_HOST || 'smtp-mail.outlook.com');
 
 // Test SMTP endpoint
 router.get('/test-smtp', async (req, res) => {

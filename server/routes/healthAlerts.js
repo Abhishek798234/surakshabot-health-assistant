@@ -12,12 +12,17 @@ if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
   client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 }
 
-// Gmail SMTP configuration
+// Multi-provider SMTP configuration
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: process.env.SMTP_HOST || 'smtp-mail.outlook.com',
+  port: parseInt(process.env.SMTP_PORT) || 587,
+  secure: false,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS
+  },
+  tls: {
+    ciphers: 'SSLv3'
   }
 });
 
@@ -147,7 +152,7 @@ const sendAlertNotifications = async (alert) => {
       if (subscription.preferences.email && subscription.email) {
         try {
           const mailOptions = {
-            from: `"Surakshabot" <${process.env.SMTP_USER}>`,
+            from: process.env.SMTP_USER,
             to: subscription.email,
             subject: `🚨 ${alert.severity} Health Alert: ${alert.title}`,
             html: `
