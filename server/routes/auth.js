@@ -4,16 +4,56 @@ const nodemailer = require('nodemailer');
 const User = require('../models/User');
 const OTP = require('../models/OTP');
 
-// Gmail SMTP configuration
+// Gmail SMTP configuration with enhanced settings
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS
+  },
+  tls: {
+    rejectUnauthorized: false
+  }
+});
+
+// Test SMTP connection on startup
+transporter.verify((error, success) => {
+  if (error) {
+    console.log('❌ SMTP Error:', error.message);
+  } else {
+    console.log('✅ SMTP Server ready');
   }
 });
 
 console.log('✅ Gmail SMTP configured for OTP sending');
+
+// Test SMTP endpoint
+router.get('/test-smtp', async (req, res) => {
+  try {
+    console.log('🧪 Testing SMTP connection...');
+    await transporter.verify();
+    
+    res.json({
+      success: true,
+      message: 'SMTP connection successful',
+      config: {
+        host: 'smtp.gmail.com',
+        port: 587,
+        user: process.env.SMTP_USER,
+        passSet: !!process.env.SMTP_PASS
+      }
+    });
+  } catch (error) {
+    console.error('❌ SMTP test failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      code: error.code
+    });
+  }
+});
 
 
 
@@ -68,12 +108,18 @@ router.post('/send-otp', async (req, res) => {
     
     console.log('🔐 Generated OTP:', otp);
     
+    // Check SMTP configuration
+    console.log('📧 SMTP Config Check:');
+    console.log('SMTP_USER:', process.env.SMTP_USER ? 'Set' : 'Missing');
+    console.log('SMTP_PASS:', process.env.SMTP_PASS ? 'Set' : 'Missing');
+    
     // Send OTP via Gmail SMTP
     try {
       const mailOptions = {
-        from: `"Surakshabot" <${process.env.SMTP_USER}>`,
+        from: process.env.SMTP_USER,
         to: user.email,
         subject: 'Surakshabot Login OTP',
+        text: `Hello ${user.name}, Your OTP for Surakshabot login is: ${otp}. This OTP will expire in 5 minutes.`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
             <h2 style="color: #6366f1; text-align: center;">Surakshabot Login OTP</h2>
@@ -89,9 +135,11 @@ router.post('/send-otp', async (req, res) => {
         `
       };
       
-      console.log('📧 Sending OTP email to:', user.email);
-      await transporter.sendMail(mailOptions);
-      console.log('✅ Email sent successfully');
+      console.log('📧 Attempting to send email to:', user.email);
+      console.log('📧 From address:', process.env.SMTP_USER);
+      
+      const info = await transporter.sendMail(mailOptions);
+      console.log('✅ Email sent successfully. Message ID:', info.messageId);
       
       res.json({
         success: true,
@@ -100,14 +148,18 @@ router.post('/send-otp', async (req, res) => {
       });
       
     } catch (emailError) {
-      console.error('❌ Email sending failed:', emailError.message);
+      console.error('❌ Email sending failed:');
+      console.error('Error code:', emailError.code);
+      console.error('Error message:', emailError.message);
+      console.error('Error response:', emailError.response);
       
       // Fallback: return OTP in response
       res.json({
         success: true,
-        message: `Email failed. Your OTP: ${otp}`,
+        message: `Email failed (${emailError.code || 'SMTP_ERROR'}). Your OTP: ${otp}`,
         email: user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3'),
-        otp: otp
+        otp: otp,
+        emailError: emailError.message
       });
     }
     
