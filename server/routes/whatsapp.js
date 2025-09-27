@@ -3,6 +3,10 @@ const router = express.Router();
 const twilio = require('twilio');
 const { generateGeminiResponse, createOrGetUser } = require('../services/geminiService');
 
+// Middleware to parse form data from Twilio
+router.use(express.urlencoded({ extended: true }));
+router.use(express.json());
+
 // Initialize Twilio client
 let client;
 if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
@@ -37,14 +41,26 @@ router.post('/webhook', async (req, res) => {
     console.log('Timestamp:', new Date().toISOString());
     console.log('Method:', req.method);
     console.log('URL:', req.url);
-    console.log('Headers:', JSON.stringify(req.headers, null, 2));
-    console.log('Body:', JSON.stringify(req.body, null, 2));
+    console.log('Content-Type:', req.headers['content-type']);
+    console.log('Body (parsed):', JSON.stringify(req.body, null, 2));
+    console.log('Raw body keys:', Object.keys(req.body));
     console.log('🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥\n\n');
     
-    const { Body: messageBody, From: fromNumber, To: toNumber, ProfileName: userName } = req.body;
+    // Extract Twilio webhook data
+    const messageBody = req.body.Body;
+    const fromNumber = req.body.From;
+    const toNumber = req.body.To;
+    const userName = req.body.ProfileName;
+    
+    console.log('📨 Extracted data:');
+    console.log('Body:', messageBody);
+    console.log('From:', fromNumber);
+    console.log('To:', toNumber);
+    console.log('ProfileName:', userName);
     
     if (!messageBody || !fromNumber) {
       console.log('⚠️ Empty message or missing sender, ignoring');
+      console.log('Available fields:', Object.keys(req.body));
       return res.status(200).send('OK');
     }
     
