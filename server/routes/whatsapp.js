@@ -91,23 +91,24 @@ router.post('/webhook', async (req, res) => {
     let responseMessage = '';
     
     try {
-      // Check for user registration pattern
-      const userPattern = /my name is ([\w\s]+) and my phone number is ([\+\d\s\-\(\)]+)/i;
-      const userMatch = messageBody.match(userPattern);
-      
-      if (userMatch) {
-        const [, name, phone] = userMatch;
-        const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
-        
-        // Create user account
-        const userData = await createOrGetUser(name.trim(), cleanPhone);
-        
-        if (userData.success) {
-          responseMessage = `🎉 Welcome ${name.trim()}! Your Surakshabot profile has been created successfully.\n\nI can now help you with:\n• 🩹 Vaccination reminders\n• 🏥 Appointment scheduling\n• 🔍 Find nearby hospitals\n• 🚨 Health alerts\n• 💬 Health guidance\n\nHow can I assist you today?`;
-        } else {
-          responseMessage = `❌ There was an error creating your profile. Please try again or contact support.`;
-        }
-      } else {
+      // Handle greeting and menu
+      if (messageBody.toLowerCase().trim() === 'hi' || messageBody.toLowerCase().trim() === 'hello' || messageBody.toLowerCase().trim() === 'start') {
+        responseMessage = `👋 Hello! Welcome to *Surakshabot* - Your AI Health Assistant\n\nI can help you with:\n\n1️⃣ *Health Questions* - Ask any health-related query\n2️⃣ *Vaccination Reminders* - Schedule vaccination alerts\n3️⃣ *Appointments* - Book doctor appointments\n4️⃣ *Help* - Get detailed instructions\n\nJust reply with the number (1, 2, 3, or 4) or type:\n• "Health question"\n• "Vaccination"\n• "Appointment"\n• "Help"\n\nWhat would you like to do?`;
+      }
+      // Handle menu selections
+      else if (messageBody.trim() === '1' || messageBody.toLowerCase().includes('health question')) {
+        responseMessage = `🩺 *Health Questions*\n\nI can help with:\n• Symptoms and conditions\n• General health advice\n• Medication information\n• First aid guidance\n\nJust describe your health concern, for example:\n"I have a headache"\n"What should I do for fever?"\n\n*Note: This is for educational purposes only. Consult a doctor for medical advice.*`;
+      }
+      else if (messageBody.trim() === '2' || messageBody.toLowerCase().includes('vaccination')) {
+        responseMessage = `💉 *Vaccination Reminders*\n\nTo schedule a vaccination reminder, use this format:\n\n*name: [Child's Name] vaccine: [Vaccine] date: [YYYY-MM-DD] time: [HH:MM]*\n\nExample:\n"name: John vaccine: Polio date: 2024-12-15 time: 09:00"\n\nI'll send you a WhatsApp reminder one day before the due date!`;
+      }
+      else if (messageBody.trim() === '3' || messageBody.toLowerCase().includes('appointment')) {
+        responseMessage = `🏥 *Doctor Appointments*\n\nTo book an appointment, use this format:\n\n*appointment: patient: [Name] doctor: [Doctor] date: [YYYY-MM-DD] time: [HH:MM]*\n\nExample:\n"appointment: patient: John doctor: Dr. Smith date: 2024-12-15 time: 10:00"\n\nI'll send you a confirmation and reminder!`;
+      }
+      else if (messageBody.trim() === '4' || messageBody.toLowerCase().includes('help')) {
+        responseMessage = `ℹ️ *Surakshabot Help*\n\n*Available Services:*\n🩺 Health Questions - Ask any health query\n💉 Vaccination Reminders - Get WhatsApp alerts\n🏥 Appointments - Book and get reminders\n🔍 Find Hospitals - Get nearby medical facilities\n\n*Quick Commands:*\n• Type "hi" - Show main menu\n• Type "1" - Health questions\n• Type "2" - Vaccination reminders\n• Type "3" - Appointments\n• Type "4" - Help\n\n*Examples:*\n"I have fever"\n"name: John vaccine: MMR date: 2024-12-15 time: 09:00"\n"find hospital near me"\n\nType "hi" anytime to return to the main menu!`;
+      }
+      else {
         // Generate AI response using Gemini
         console.log('🤖 Generating AI response...');
         responseMessage = await generateGeminiResponse(messageBody, userPhone);
@@ -121,6 +122,9 @@ router.post('/webhook', async (req, res) => {
           .substring(0, 1600);  // WhatsApp message limit
           
         console.log('🤖 Cleaned response for WhatsApp:', responseMessage.substring(0, 100) + '...');
+        
+        // Add menu prompt at the end
+        responseMessage += '\n\n💡 Type "hi" to see the main menu anytime!';
       }
       
     } catch (error) {

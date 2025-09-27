@@ -160,7 +160,12 @@ const createOrGetUser = async (name, phone, email) => {
     let user = await User.findOne({ phone });
 
     if (!user) {
-      user = new User({ name, phone, email });
+      // Create user with email as optional for WhatsApp users
+      user = new User({ 
+        name, 
+        phone, 
+        email: email || `${phone.replace(/\D/g, '')}@whatsapp.temp` // Temporary email for WhatsApp users
+      });
       await user.save();
     }
 
