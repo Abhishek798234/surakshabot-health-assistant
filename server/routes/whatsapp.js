@@ -12,27 +12,48 @@ if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
 
 // Webhook verification (GET request from Twilio)
 router.get('/webhook', (req, res) => {
-  console.log('🔥 GET WEBHOOK HIT - Verification request');
-  console.log('🔥 Query params:', req.query);
-  console.log('🔥 Headers:', req.headers);
-  res.status(200).send('WhatsApp webhook is working!');
+  console.log('🔥 GET WEBHOOK - Verification request');
+  console.log('Query params:', req.query);
+  res.status(200).send('Surakshabot WhatsApp webhook is active and ready!');
+});
+
+// Manual webhook test
+router.post('/test-webhook', (req, res) => {
+  console.log('🧪 Manual webhook test triggered');
+  console.log('Test body:', req.body);
+  
+  res.json({
+    success: true,
+    message: 'Webhook test successful',
+    timestamp: new Date().toISOString(),
+    body: req.body
+  });
 });
 
 // WhatsApp message webhook (POST request from Twilio)
 router.post('/webhook', async (req, res) => {
   try {
-    console.log('🔥 WEBHOOK HIT - Raw body:', JSON.stringify(req.body, null, 2));
-    console.log('🔥 Headers:', JSON.stringify(req.headers, null, 2));
-    console.log('🔥 Method:', req.method);
-    console.log('🔥 URL:', req.url);
+    console.log('🔥 WHATSAPP WEBHOOK RECEIVED');
+    console.log('Body:', JSON.stringify(req.body, null, 2));
+    console.log('Method:', req.method);
+    console.log('URL:', req.url);
     
-    const { Body: messageBody, From: fromNumber, To: toNumber } = req.body;
+    const { Body: messageBody, From: fromNumber, To: toNumber, ProfileName: userName } = req.body;
+    
+    if (!messageBody || !fromNumber) {
+      console.log('⚠️ Empty message or missing sender, ignoring');
+      return res.status(200).send('OK');
+    }
     
     // Extract phone number (remove whatsapp: prefix)
     const userPhone = fromNumber.replace('whatsapp:', '');
     const botNumber = toNumber.replace('whatsapp:', '');
     
-    console.log(`📨 Message from ${userPhone}: ${messageBody}`);
+    console.log(`📨 WhatsApp Message:`);
+    console.log('From:', userPhone);
+    console.log('Name:', userName || 'Unknown');
+    console.log('Message:', messageBody);
+    console.log('To Bot:', botNumber);
     
     // Skip if message is empty or from bot
     if (!messageBody || messageBody.trim() === '') {
@@ -42,7 +63,9 @@ router.post('/webhook', async (req, res) => {
     // Handle Twilio sandbox join/leave messages
     if (messageBody.toLowerCase().includes('sandbox') || 
         messageBody.toLowerCase().includes('joined') ||
-        messageBody.toLowerCase().includes('left')) {
+        messageBody.toLowerCase().includes('left') ||
+        messageBody.toLowerCase().includes('your code is')) {
+      console.log('🤖 Ignoring Twilio system message');
       return res.status(200).send('OK');
     }
     
@@ -67,13 +90,18 @@ router.post('/webhook', async (req, res) => {
         }
       } else {
         // Generate AI response using Gemini
+        console.log('🤖 Generating AI response...');
         responseMessage = await generateGeminiResponse(messageBody, userPhone);
+        console.log('🤖 AI response generated, length:', responseMessage.length);
         
         // Clean up response for WhatsApp (remove markdown formatting)
         responseMessage = responseMessage
           .replace(/\*\*(.*?)\*\*/g, '*$1*')  // Bold to WhatsApp bold
           .replace(/\[(.*?)\]\((.*?)\)/g, '$1: $2')  // Links to text: url
-          .replace(/\\n/g, '\n');  // Fix line breaks
+          .replace(/\\n/g, '\n')  // Fix line breaks
+          .substring(0, 1600);  // WhatsApp message limit
+          
+        console.log('🤖 Cleaned response for WhatsApp:', responseMessage.substring(0, 100) + '...');
       }
       
     } catch (error) {
@@ -84,19 +112,30 @@ router.post('/webhook', async (req, res) => {
     // Send response back via WhatsApp
     if (client && responseMessage) {
       try {
-        console.log(`📤 Sending response to ${userPhone}`);
+        console.log(`📤 Sending WhatsApp response:`);
+        console.log('To:', fromNumber);
+        console.log('From:', process.env.TWILIO_WHATSAPP_NUMBER);
+        console.log('Message length:', responseMessage.length);
         
-        await client.messages.create({
+        const message = await client.messages.create({
           from: process.env.TWILIO_WHATSAPP_NUMBER,
           to: fromNumber,
           body: responseMessage
         });
         
-        console.log('✅ WhatsApp response sent successfully');
+        console.log('✅ WhatsApp response sent successfully!');
+        console.log('Message SID:', message.sid);
         
       } catch (twilioError) {
-        console.error('❌ Failed to send WhatsApp response:', twilioError);
+        console.error('❌ Failed to send WhatsApp response:');
+        console.error('Error code:', twilioError.code);
+        console.error('Error message:', twilioError.message);
+        console.error('More info:', twilioError.moreInfo);
       }
+    } else {
+      console.log('⚠️ WhatsApp response skipped:');
+      console.log('Client available:', !!client);
+      console.log('Response message:', !!responseMessage);
     }
     
     // Always respond with 200 to Twilio
