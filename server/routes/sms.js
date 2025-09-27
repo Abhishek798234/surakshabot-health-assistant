@@ -61,6 +61,12 @@ router.post('/webhook', async (req, res) => {
     console.log('Body (parsed):', JSON.stringify(req.body, null, 2));
     console.log('🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥\n\n');
 
+    // Skip Twilio system notifications and error reports
+    if (req.body.Level || req.body.Payload || req.body.PayloadType) {
+      console.log('🤖 Ignoring Twilio system notification');
+      return res.status(200).send('OK');
+    }
+    
     // Extract Twilio SMS data
     const messageBody = req.body.Body;
     const fromNumber = req.body.From;
@@ -90,83 +96,57 @@ router.post('/webhook', async (req, res) => {
     try {
       // Handle greeting and menu
       if (messageBody.toLowerCase().trim() === 'hi' || messageBody.toLowerCase().trim() === 'hello' || messageBody.toLowerCase().trim() === 'start') {
-        responseMessage = `👋 Hello! Welcome to Surakshabot - Your AI Health Assistant
+        responseMessage = `👋 Surakshabot Health Assistant
 
-I can help you with:
+1. Health Questions
+2. Vaccination Reminders
+3. Appointments
+4. Help
 
-1. Health Questions - Ask any health query
-2. Vaccination Reminders - Schedule alerts  
-3. Appointments - Book doctor visits
-4. Help - Get instructions
-
-Reply with the number (1, 2, 3, or 4) or type:
-• "Health question"
-• "Vaccination" 
-• "Appointment"
-• "Help"
-
-What would you like to do?`;
+Reply with number (1-4) or type service name.`;
       }
       // Handle menu selections
       else if (messageBody.trim() === '1' || messageBody.toLowerCase().includes('health question')) {
         responseMessage = `🩺 Health Questions
 
-I can help with:
-• Symptoms and conditions
-• General health advice
-• Medication information
-• First aid guidance
+Describe your health concern:
+"I have headache"
+"What for fever?"
 
-Just describe your concern, for example:
-"I have a headache"
-"What should I do for fever?"
-
-Note: This is for educational purposes only. Consult a doctor for medical advice.`;
+Note: Educational only. Consult doctor for medical advice.`;
       }
       else if (messageBody.trim() === '2' || messageBody.toLowerCase().includes('vaccination')) {
         responseMessage = `💉 Vaccination Reminders
 
-To schedule a vaccination reminder, use this format:
-
-name: [Child's Name] vaccine: [Vaccine] date: [YYYY-MM-DD] time: [HH:MM]
+Format:
+name: [Name] vaccine: [Type] date: [YYYY-MM-DD] time: [HH:MM]
 
 Example:
-"name: John vaccine: Polio date: 2024-12-15 time: 09:00"
-
-I'll send you an SMS reminder one day before the due date!`;
+"name: John vaccine: Polio date: 2024-12-15 time: 09:00"`;
       }
       else if (messageBody.trim() === '3' || messageBody.toLowerCase().includes('appointment')) {
-        responseMessage = `🏥 Doctor Appointments
+        responseMessage = `🏥 Appointments
 
-To book an appointment, use this format:
-
-appointment: patient: [Name] doctor: [Doctor] date: [YYYY-MM-DD] time: [HH:MM]
+Format:
+appointment: patient: [Name] doctor: [Dr Name] date: [YYYY-MM-DD] time: [HH:MM]
 
 Example:
-"appointment: patient: John doctor: Dr. Smith date: 2024-12-15 time: 10:00"
-
-I'll send you a confirmation and reminder!`;
+"appointment: patient: John doctor: Dr. Smith date: 2024-12-15 time: 10:00"`;
       }
       else if (messageBody.trim() === '4' || messageBody.toLowerCase().includes('help')) {
-        responseMessage = `ℹ️ Surakshabot Help
+        responseMessage = `ℹ️ Help
 
-Available Services:
-🩺 Health Questions - Ask any health query
-💉 Vaccination Reminders - Get SMS alerts
-🏥 Appointments - Book and get reminders
+🩺 Health Questions
+💉 Vaccination Reminders
+🏥 Appointments
 
-Quick Commands:
-• Type "hi" - Show main menu
-• Type "1" - Health questions
-• Type "2" - Vaccination reminders
-• Type "3" - Appointments
-• Type "4" - Help
+Commands:
+"hi" - Menu
+"1" - Health
+"2" - Vaccination
+"3" - Appointments
 
-Examples:
-"I have fever"
-"name: John vaccine: MMR date: 2024-12-15 time: 09:00"
-
-Type "hi" anytime to return to the main menu!`;
+Type "hi" for menu.`;
       }
       else {
         // Check for common health queries and provide fallback responses
@@ -175,61 +155,41 @@ Type "hi" anytime to return to the main menu!`;
         if (healthQuery.includes('headache') || healthQuery.includes('head pain')) {
           responseMessage = `🩺 Headache Relief
 
-Common causes:
-• Stress and tension
-• Dehydration
-• Lack of sleep
-• Eye strain
+Causes: Stress, dehydration, lack of sleep
 
-What you can do:
-• Rest in a quiet, dark room
-• Drink plenty of water
-• Apply cold compress to forehead
-• Take over-the-counter pain reliever if needed
+Treatment:
+• Rest in dark room
+• Drink water
+• Cold compress
+• Pain reliever if needed
 
-See a doctor if:
-• Severe or sudden headache
-• Headache with fever
-• Vision changes
-
-This is for educational purposes only. Consult a doctor for medical advice.`;
+See doctor if severe/sudden.
+Educational only.`;
         }
         else if (healthQuery.includes('fever') || healthQuery.includes('temperature')) {
           responseMessage = `🌡️ Fever Management
 
-Normal temperature: 98.6°F (37°C)
-Fever: Above 100.4°F (38°C)
+Normal: 98.6°F, Fever: >100.4°F
 
-What you can do:
-• Rest and stay hydrated
-• Take paracetamol or ibuprofen
-• Use cool compresses
-• Monitor temperature regularly
+Treatment:
+• Rest, hydrate
+• Paracetamol/ibuprofen
+• Cool compress
 
-See a doctor if:
-• Fever above 103°F (39.4°C)
-• Fever lasts more than 3 days
-• Difficulty breathing
-
-This is for educational purposes only. Consult a doctor for medical advice.`;
+See doctor if >103°F or >3 days.
+Educational only.`;
         }
         else if (healthQuery.includes('cough') || healthQuery.includes('cold')) {
-          responseMessage = `🤧 Cough & Cold Care
+          responseMessage = `🤧 Cough & Cold
 
-What you can do:
-• Rest and drink fluids
-• Warm salt water gargle
-• Honey for cough (not for babies under 1 year)
+Treatment:
+• Rest, fluids
+• Salt water gargle
+• Honey (not <1yr babies)
 • Steam inhalation
-• Use humidifier
 
-See a doctor if:
-• Symptoms worsen after 7 days
-• High fever
-• Difficulty breathing
-• Chest pain
-
-This is for educational purposes only. Consult a doctor for medical advice.`;
+See doctor if worsens >7 days.
+Educational only.`;
         }
         else {
           // Try Gemini API, but provide fallback if it fails
@@ -243,30 +203,27 @@ This is for educational purposes only. Consult a doctor for medical advice.`;
               .replace(/\*\*(.*?)\*\*/g, '$1')  // Remove bold
               .replace(/\[(.*?)\]\((.*?)\)/g, '$1: $2')  // Links to text: url
               .replace(/\\n/g, '\n')  // Fix line breaks
-              .substring(0, 1500);  // SMS length limit
+              .substring(0, 800);  // Shorter SMS limit
               
           } catch (error) {
             console.error('Gemini API failed, using fallback response');
             responseMessage = `🩺 Health Guidance
 
-I'm currently experiencing technical difficulties.
-
-For your health query: "${messageBody}"
+Technical difficulties.
 
 General advice:
 • Stay hydrated
-• Get adequate rest
-• Maintain good hygiene
-• Eat nutritious food
+• Rest well
+• Good hygiene
+• Nutritious food
 
-For specific medical concerns, please consult a healthcare provider.
-
-This is for educational purposes only. Always consult a doctor for medical advice.`;
+Consult healthcare provider.
+Educational only.`;
           }
         }
         
-        // Add menu prompt at the end
-        responseMessage += '\n\nType "hi" to see the main menu anytime!';
+        // Add short menu prompt
+        responseMessage += '\n\nType "hi" for menu.';
       }
       
     } catch (error) {
