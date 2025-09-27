@@ -6,10 +6,17 @@ const cron = require('node-cron');
 const HealthAlert = require('../models/HealthAlert');
 const AlertSubscription = require('../models/AlertSubscription');
 
-// Initialize Twilio client only if credentials are available
+// Initialize Twilio client with enhanced logging
 let client;
-if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
-  client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_WHATSAPP_NUMBER) {
+  try {
+    client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    console.log('✅ Twilio initialized for health alerts');
+  } catch (error) {
+    console.error('❌ Twilio initialization failed:', error.message);
+  }
+} else {
+  console.log('⚠️ Twilio disabled for health alerts - Missing credentials');
 }
 
 // SendGrid configuration

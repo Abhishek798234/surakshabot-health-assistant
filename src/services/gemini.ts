@@ -134,7 +134,7 @@ export const generateGeminiResponse = async (message: string, phone?: string): P
       const appointmentData = await response.json();
       
       if (appointmentData.success) {
-        return `✅ Appointment scheduled successfully!\n\nPatient: ${patientName}\nDoctor: Dr. ${doctorName} (${specialty})\nHospital: ${hospitalName}\nDate: ${appointmentDate}\nTime: ${appointmentTime}\n\nA WhatsApp confirmation has been sent. You will receive a reminder 1 day before your appointment.`;
+        return `✅ Appointment scheduled successfully!\n\nPatient: ${patientName}\nDoctor: Dr. ${doctorName} (${specialty})\nHospital: ${hospitalName}\nDate: ${appointmentDate}\nTime: ${appointmentTime}\n\nA WhatsApp confirmation has been sent. You will receive a reminder 1 day before your appointment.\n\n📱 **WhatsApp Setup Required:**\nTo receive WhatsApp reminders, send "join sit-remove" to:\n[+14155238886](https://wa.me/14155238886?text=join%20sit-remove)`;
       } else {
         return `❌ Error scheduling appointment: ${appointmentData.error || 'Unknown error'}`;
       }
@@ -165,7 +165,7 @@ export const generateGeminiResponse = async (message: string, phone?: string): P
           appointmentList += `💡 You will receive WhatsApp reminders 1 day before each appointment.`;
           return appointmentList;
         } else {
-          return `📅 No upcoming appointments found.\n\nTo schedule an appointment, use this format:\n"appointment: patient: [Name] doctor: [Doctor Name] specialty: [Specialty] hospital: [Hospital] date: [YYYY-MM-DD] time: [HH:MM]"\n\nExample: "appointment: patient: John doctor: Dr. Smith specialty: Cardiology hospital: City Hospital date: 2024-02-15 time: 10:00"`;
+          return `📅 No upcoming appointments found.\n\nTo schedule an appointment, use this format:\n"appointment: patient: [Name] doctor: [Doctor Name] specialty: [Specialty] hospital: [Hospital] date: [YYYY-MM-DD] time: [HH:MM]"\n\nExample: "appointment: patient: John doctor: Dr. Smith specialty: Cardiology hospital: City Hospital date: 2024-02-15 time: 10:00"\n\n📱 **WhatsApp Setup:**\nFor WhatsApp reminders, send "join sit-remove" to:\n[+14155238886](https://wa.me/14155238886?text=join%20sit-remove)`;
         }
       } catch (error) {
         console.error('Get appointments error:', error);
@@ -174,6 +174,13 @@ export const generateGeminiResponse = async (message: string, phone?: string): P
     } else {
       return `To view your appointments, please register first by sharing your details: 'My name is [Your Name] and my phone number is [Your Phone Number]'`;
     }
+  }
+  
+  // Check for help or WhatsApp setup requests
+  if (message.toLowerCase().includes('help') || message.toLowerCase().includes('whatsapp') || message.toLowerCase().includes('reminder') || message.toLowerCase().includes('notification') || message.toLowerCase().includes('setup')) {
+    const helpInfo = `🩺 **Surakshabot Help**\n\n**Available Services:**\n• 🩹 Vaccination reminders\n• 🏥 Appointment scheduling\n• 🏥 Find nearby hospitals\n• 🚨 Health alerts\n• 💬 Health guidance\n\n📱 **WhatsApp Reminders Setup:**\n\n1. Click: [+14155238886](https://wa.me/14155238886?text=join%20sit-remove)\n2. Send: "join sit-remove"\n3. Get confirmation\n\n**Examples:**\n• "name: John vaccine: Polio date: 2024-02-15 time: 09:00"\n• "find nearby hospital"\n• "appointment: patient: John doctor: Dr. Smith date: 2024-02-15 time: 10:00"\n\nNote: WhatsApp uses Twilio Sandbox for testing.`;
+    
+    return helpInfo;
   }
   
   // Check for vaccination details with flexible patterns including time
@@ -218,7 +225,7 @@ export const generateGeminiResponse = async (message: string, phone?: string): P
       const vacData = await vacResponse.json();
       
       if (vacData.success) {
-        return `✅ Vaccination reminder scheduled successfully!\n\nChild: ${childName}\nVaccine: ${vaccine}\nDue Date: ${dueDate}\nReminder Time: ${reminderTime}\n\nA WhatsApp confirmation has been sent to your number. You will also receive a reminder one day before the due date at ${reminderTime}. Please consult with a healthcare provider for proper vaccination guidance.`;
+        return `✅ Vaccination reminder scheduled successfully!\n\nChild: ${childName}\nVaccine: ${vaccine}\nDue Date: ${dueDate}\nReminder Time: ${reminderTime}\n\nA WhatsApp confirmation has been sent to your number. You will also receive a reminder one day before the due date at ${reminderTime}.\n\n📱 **WhatsApp Setup Required:**\nTo receive WhatsApp reminders, send "join sit-remove" to:\n[+14155238886](https://wa.me/14155238886?text=join%20sit-remove)\n\nPlease consult with a healthcare provider for proper vaccination guidance.`;
       } else {
         return `❌ Error scheduling vaccination: ${vacData.error || 'Unknown error'}`;
       }
@@ -301,6 +308,11 @@ export const generateGeminiResponse = async (message: string, phone?: string): P
 
     const data = await response.json();
     const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || 'I apologize, but I encountered an issue processing your request.';
+    
+    // Add WhatsApp setup info to relevant responses
+    if (aiResponse.toLowerCase().includes('vaccination') || aiResponse.toLowerCase().includes('appointment') || aiResponse.toLowerCase().includes('reminder')) {
+      return aiResponse + '\n\n📱 **WhatsApp Reminders:**\nFor WhatsApp notifications, send "join sit-remove" to [+14155238886](https://wa.me/14155238886?text=join%20sit-remove)';
+    }
     
     // If response mentions finding facilities, add location prompt
     if (aiResponse.toLowerCase().includes('hospital') || aiResponse.toLowerCase().includes('clinic') || aiResponse.toLowerCase().includes('pharmacy')) {

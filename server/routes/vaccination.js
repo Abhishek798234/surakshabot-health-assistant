@@ -4,13 +4,21 @@ const twilio = require('twilio');
 const cron = require('node-cron');
 const Vaccination = require('../models/Vaccination');
 
-// Initialize Twilio client only if credentials are available
+// Initialize Twilio client with enhanced logging
 let client;
-if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
-  client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-  console.log('✅ Twilio initialized');
+if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_WHATSAPP_NUMBER) {
+  try {
+    client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    console.log('✅ Twilio initialized for vaccination reminders');
+    console.log('📱 WhatsApp Number:', process.env.TWILIO_WHATSAPP_NUMBER);
+  } catch (error) {
+    console.error('❌ Twilio initialization failed:', error.message);
+  }
 } else {
-  console.log('⚠️ Twilio disabled (credentials not found)');
+  console.log('⚠️ Twilio disabled - Missing credentials:');
+  console.log('ACCOUNT_SID:', process.env.TWILIO_ACCOUNT_SID ? 'Set' : 'Missing');
+  console.log('AUTH_TOKEN:', process.env.TWILIO_AUTH_TOKEN ? 'Set' : 'Missing');
+  console.log('WHATSAPP_NUMBER:', process.env.TWILIO_WHATSAPP_NUMBER ? 'Set' : 'Missing');
 }
 
 // Format phone number to international format
@@ -52,25 +60,34 @@ router.post('/schedule', async (req, res) => {
     await vaccination.save();
     
     // Send immediate WhatsApp confirmation if Twilio is available
-    if (client) {
-      const confirmationMessage = `✅ Vaccination reminder scheduled successfully!
+    if (client && process.env.TWILIO_WHATSAPP_NUMBER) {
+      const confirmationMessage = `✅ Vaccination Reminder Scheduled!
 
 Child: ${name}
 Vaccine: ${vaccine}
-Due Date: ${dueDate}
+Due Date: ${new Date(dueDate).toDateString()}
 Reminder Time: ${reminderTime}
 
-You will receive a reminder one day before the due date. Please consult with a healthcare provider for proper vaccination guidance.`;
+You will receive a reminder one day before the due date. Please consult with a healthcare provider for proper vaccination guidance.
+
+👨‍⚕️ Surakshabot Health Assistant`;
 
       try {
-        await client.messages.create({
+        console.log('📤 Sending WhatsApp confirmation to:', formattedPhone);
+        const message = await client.messages.create({
           from: process.env.TWILIO_WHATSAPP_NUMBER,
           to: `whatsapp:${formattedPhone}`,
           body: confirmationMessage
         });
+        console.log('✅ WhatsApp confirmation sent. SID:', message.sid);
       } catch (twilioError) {
-        console.error('WhatsApp send error:', twilioError);
+        console.error('❌ WhatsApp send error:');
+        console.error('Error code:', twilioError.code);
+        console.error('Error message:', twilioError.message);
+        console.error('More info:', twilioError.moreInfo);
       }
+    } else {
+      console.log('⚠️ WhatsApp confirmation skipped - Twilio not configured');
     }
     
     res.json({ 
@@ -84,6 +101,59 @@ You will receive a reminder one day before the due date. Please consult with a h
     res.status(500).json({ 
       success: false, 
       error: error.message 
+    });
+  }
+});
+
+// Test WhatsApp endpoint
+router.get('/test-whatsapp/:phone', async (req, res) => {
+  try {
+    const phone = formatPhoneNumber(req.params.phone);
+    
+    if (!client) {
+      return res.status(400).json({
+        success: false,
+        error: 'Twilio not configured',
+        config: {
+          accountSid: !!process.env.TWILIO_ACCOUNT_SID,
+          authToken: !!process.env.TWILIO_AUTH_TOKEN,
+          whatsappNumber: !!process.env.TWILIO_WHATSAPP_NUMBER
+        }
+      });
+    }
+    
+    const testMessage = `🧪 Test Message from Surakshabot
+
+This is a test WhatsApp message to verify the integration is working.
+
+Phone: ${phone}
+Time: ${new Date().toLocaleString()}
+
+👨⚕️ Surakshabot Health Assistant`;
+    
+    console.log('📤 Sending test WhatsApp to:', phone);
+    const message = await client.messages.create({
+      from: process.env.TWILIO_WHATSAPP_NUMBER,
+      to: `whatsapp:${phone}`,
+      body: testMessage
+    });
+    
+    console.log('✅ Test WhatsApp sent. SID:', message.sid);
+    
+    res.json({
+      success: true,
+      message: 'Test WhatsApp sent successfully',
+      messageSid: message.sid,
+      to: phone
+    });
+    
+  } catch (error) {
+    console.error('❌ Test WhatsApp failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      code: error.code,
+      moreInfo: error.moreInfo
     });
   }
 });
@@ -120,32 +190,43 @@ cron.schedule('0 9 * * *', async () => {
       reminderSent: false
     });
     
+    console.log(`Found ${pendingReminders.length} vaccination reminders to send`);
+    
     for (const vaccination of pendingReminders) {
       try {
-        if (client) {
+        if (client && process.env.TWILIO_WHATSAPP_NUMBER) {
           const reminderMessage = `🩹 Vaccination Reminder
 
 Hello! This is a reminder that ${vaccination.name}'s ${vaccination.vaccine} vaccination is due tomorrow (${vaccination.dueDate.toDateString()}).
 
 Please visit your healthcare provider at the scheduled time: ${vaccination.reminderTime}
 
-Stay healthy! 💙`;
+Stay healthy! 💙
 
-          await client.messages.create({
+👨⚕️ Surakshabot Health Assistant`;
+
+          console.log(`📤 Sending vaccination reminder to ${vaccination.phone} for ${vaccination.name}`);
+          const message = await client.messages.create({
             from: process.env.TWILIO_WHATSAPP_NUMBER,
             to: `whatsapp:${vaccination.phone}`,
             body: reminderMessage
           });
+          console.log(`✅ Vaccination reminder sent. SID: ${message.sid}`);
+        } else {
+          console.log(`⚠️ Skipping reminder for ${vaccination.name} - Twilio not configured`);
         }
         
         // Mark as sent
         vaccination.reminderSent = true;
         await vaccination.save();
         
-        console.log(`Reminder sent for ${vaccination.name} - ${vaccination.vaccine}`);
+        console.log(`✅ Reminder marked as sent for ${vaccination.name} - ${vaccination.vaccine}`);
         
       } catch (error) {
-        console.error(`Failed to send reminder for ${vaccination.name}:`, error);
+        console.error(`❌ Failed to send reminder for ${vaccination.name}:`);
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        console.error('More info:', error.moreInfo);
       }
     }
     
