@@ -21,28 +21,37 @@ if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.e
   console.log('WHATSAPP_NUMBER:', process.env.TWILIO_WHATSAPP_NUMBER ? 'Set' : 'Missing');
 }
 
-// Format phone number to international format
+// Format phone number to international format with enhanced debugging
 const formatPhoneNumber = (phone) => {
+  console.log('🔥 PHONE FORMATTING DEBUG:');
+  console.log('Input phone:', phone);
+  
   // Remove all non-digit characters
   let cleanPhone = phone.replace(/\D/g, '');
+  console.log('Clean digits only:', cleanPhone);
   
-  console.log('📞 Original phone:', phone);
-  console.log('📞 Clean phone:', cleanPhone);
-  
-  // If it starts with 0, replace with +91 (India)
+  // Handle different Indian number formats
   if (cleanPhone.startsWith('0')) {
+    // Remove leading 0 and add +91
     cleanPhone = '+91' + cleanPhone.substring(1);
-  }
-  // If it starts with 91, add +
-  else if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
+    console.log('Removed leading 0, added +91:', cleanPhone);
+  } else if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
+    // Already has 91, just add +
     cleanPhone = '+' + cleanPhone;
-  }
-  // If it doesn't start with +, add +91
-  else if (!cleanPhone.startsWith('+')) {
+    console.log('Added + to existing 91:', cleanPhone);
+  } else if (cleanPhone.length === 10) {
+    // 10 digit Indian number, add +91
     cleanPhone = '+91' + cleanPhone;
+    console.log('10 digit number, added +91:', cleanPhone);
+  } else if (!cleanPhone.startsWith('+')) {
+    // Fallback: add +91
+    cleanPhone = '+91' + cleanPhone;
+    console.log('Fallback, added +91:', cleanPhone);
   }
   
-  console.log('📞 Formatted phone:', cleanPhone);
+  console.log('🔥 FINAL FORMATTED PHONE:', cleanPhone);
+  console.log('🔥 WhatsApp format will be: whatsapp:' + cleanPhone);
+  
   return cleanPhone;
 };
 
@@ -81,26 +90,49 @@ You will receive a reminder one day before the due date. Please consult with a h
 👨‍⚕️ Surakshabot Health Assistant`;
 
       try {
-        console.log('📤 Attempting WhatsApp send:');
-        console.log('From:', process.env.TWILIO_WHATSAPP_NUMBER);
-        console.log('To:', `whatsapp:${formattedPhone}`);
+        console.log('🔥 TWILIO WHATSAPP SEND ATTEMPT:');
+        console.log('From (Twilio Number):', process.env.TWILIO_WHATSAPP_NUMBER);
+        console.log('To (User Number):', `whatsapp:${formattedPhone}`);
         console.log('Message length:', confirmationMessage.length);
+        console.log('Account SID:', process.env.TWILIO_ACCOUNT_SID);
+        console.log('Auth Token present:', !!process.env.TWILIO_AUTH_TOKEN);
+        
+        // Verify the phone number is in correct format
+        if (!formattedPhone.startsWith('+')) {
+          throw new Error('Phone number must start with + for international format');
+        }
         
         const message = await client.messages.create({
           from: process.env.TWILIO_WHATSAPP_NUMBER,
           to: `whatsapp:${formattedPhone}`,
           body: confirmationMessage
         });
-        console.log('✅ WhatsApp confirmation sent successfully!');
+        
+        console.log('🔥 TWILIO SUCCESS:');
         console.log('Message SID:', message.sid);
         console.log('Status:', message.status);
+        console.log('Direction:', message.direction);
+        console.log('Date created:', message.dateCreated);
+        
       } catch (twilioError) {
-        console.error('❌ WhatsApp send failed:');
+        console.error('🔥 TWILIO ERROR DETAILS:');
         console.error('Error code:', twilioError.code);
         console.error('Error message:', twilioError.message);
         console.error('More info:', twilioError.moreInfo);
         console.error('Status:', twilioError.status);
-        console.error('Full error:', JSON.stringify(twilioError, null, 2));
+        console.error('Details:', twilioError.details);
+        
+        // Common Twilio error codes
+        if (twilioError.code === 63016) {
+          console.error('🚨 ERROR: Phone number not verified in Twilio Sandbox!');
+          console.error('Solution: Send "join sit-remove" to +14155238886 from', formattedPhone);
+        } else if (twilioError.code === 21211) {
+          console.error('🚨 ERROR: Invalid phone number format!');
+        } else if (twilioError.code === 21614) {
+          console.error('🚨 ERROR: Message body is required!');
+        }
+        
+        console.error('Full error object:', JSON.stringify(twilioError, null, 2));
       }
     } else {
       console.log('⚠️ WhatsApp confirmation skipped:');
@@ -121,6 +153,64 @@ You will receive a reminder one day before the due date. Please consult with a h
     res.status(500).json({ 
       success: false, 
       error: error.message 
+    });
+  }
+});
+
+// Direct WhatsApp test for debugging
+router.get('/debug-whatsapp', async (req, res) => {
+  try {
+    const testPhone = '+919310827576'; // Your number
+    
+    console.log('🔥 DIRECT WHATSAPP DEBUG TEST');
+    console.log('Testing with phone:', testPhone);
+    
+    if (!client) {
+      return res.json({
+        success: false,
+        error: 'Twilio client not initialized',
+        config: {
+          accountSid: !!process.env.TWILIO_ACCOUNT_SID,
+          authToken: !!process.env.TWILIO_AUTH_TOKEN,
+          whatsappNumber: process.env.TWILIO_WHATSAPP_NUMBER
+        }
+      });
+    }
+    
+    const testMessage = `🔥 DEBUG TEST MESSAGE
+
+This is a direct test to your number: ${testPhone}
+
+Time: ${new Date().toLocaleString()}
+
+If you receive this, WhatsApp integration is working!
+
+👨⚕️ Surakshabot`;
+    
+    console.log('Sending test message...');
+    const message = await client.messages.create({
+      from: process.env.TWILIO_WHATSAPP_NUMBER,
+      to: `whatsapp:${testPhone}`,
+      body: testMessage
+    });
+    
+    console.log('✅ Debug test sent successfully!');
+    
+    res.json({
+      success: true,
+      message: 'Debug WhatsApp test sent',
+      messageSid: message.sid,
+      status: message.status,
+      to: testPhone
+    });
+    
+  } catch (error) {
+    console.error('❌ Debug test failed:', error);
+    res.json({
+      success: false,
+      error: error.message,
+      code: error.code,
+      moreInfo: error.moreInfo
     });
   }
 });
