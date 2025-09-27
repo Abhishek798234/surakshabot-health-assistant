@@ -95,6 +95,35 @@ app.get('/test-cors', (req, res) => {
   });
 });
 
+// List all routes for debugging
+app.get('/api/routes', (req, res) => {
+  const routes = [];
+  app._router.stack.forEach((middleware) => {
+    if (middleware.route) {
+      routes.push({
+        path: middleware.route.path,
+        methods: Object.keys(middleware.route.methods)
+      });
+    } else if (middleware.name === 'router') {
+      middleware.handle.stack.forEach((handler) => {
+        if (handler.route) {
+          routes.push({
+            path: handler.route.path,
+            methods: Object.keys(handler.route.methods)
+          });
+        }
+      });
+    }
+  });
+  
+  res.json({
+    success: true,
+    routes: routes,
+    smsRouteExists: routes.some(r => r.path && r.path.includes('/api/sms')),
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Serve frontend for all non-API routes (must be last)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../dist/index.html'));
