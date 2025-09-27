@@ -4,21 +4,36 @@ const twilio = require('twilio');
 const cron = require('node-cron');
 const Vaccination = require('../models/Vaccination');
 
-// Initialize Twilio client with enhanced logging
+// Initialize Twilio client with credential verification
 let client;
+console.log('🔥 TWILIO CREDENTIAL CHECK:');
+console.log('ACCOUNT_SID:', process.env.TWILIO_ACCOUNT_SID ? `${process.env.TWILIO_ACCOUNT_SID.substring(0, 10)}...` : 'MISSING');
+console.log('AUTH_TOKEN:', process.env.TWILIO_AUTH_TOKEN ? `${process.env.TWILIO_AUTH_TOKEN.substring(0, 10)}...` : 'MISSING');
+console.log('WHATSAPP_NUMBER:', process.env.TWILIO_WHATSAPP_NUMBER || 'MISSING');
+
 if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_WHATSAPP_NUMBER) {
   try {
     client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-    console.log('✅ Twilio initialized for vaccination reminders');
+    console.log('✅ Twilio client created successfully');
     console.log('📱 WhatsApp Number:', process.env.TWILIO_WHATSAPP_NUMBER);
+    
+    // Test credentials by making a simple API call
+    client.api.accounts(process.env.TWILIO_ACCOUNT_SID).fetch()
+      .then(account => {
+        console.log('✅ Twilio authentication verified for account:', account.friendlyName);
+      })
+      .catch(error => {
+        console.error('❌ Twilio authentication failed:', error.message);
+        console.error('Error code:', error.code);
+      });
+      
   } catch (error) {
     console.error('❌ Twilio initialization failed:', error.message);
+    client = null;
   }
 } else {
-  console.log('⚠️ Twilio disabled - Missing credentials:');
-  console.log('ACCOUNT_SID:', process.env.TWILIO_ACCOUNT_SID ? 'Set' : 'Missing');
-  console.log('AUTH_TOKEN:', process.env.TWILIO_AUTH_TOKEN ? 'Set' : 'Missing');
-  console.log('WHATSAPP_NUMBER:', process.env.TWILIO_WHATSAPP_NUMBER ? 'Set' : 'Missing');
+  console.log('⚠️ Twilio disabled - Missing credentials');
+  client = null;
 }
 
 // Format phone number to international format with enhanced debugging
