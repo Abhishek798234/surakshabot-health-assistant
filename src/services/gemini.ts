@@ -82,10 +82,27 @@ export const generateGeminiResponse = async (message: string, phone?: string): P
   let userContext = '';
   let user = null;
   
-  // Get user context if phone is provided
-  if (phone) {
+  // Get user context from localStorage or phone parameter
+  let userPhone = phone;
+  if (!userPhone) {
+    // Try to get user from localStorage
     try {
-      const userResponse = await fetch(`/api/users/${phone}`);
+      const savedUser = localStorage.getItem('user');
+      if (savedUser) {
+        const userData = JSON.parse(savedUser);
+        userPhone = userData.phone;
+        user = userData;
+        userContext = `\n\nPatient Information: Name: ${user.name}, Phone: ${user.phone}${user.email ? `, Email: ${user.email}` : ''}`;
+      }
+    } catch (error) {
+      console.error('localStorage user fetch error:', error);
+    }
+  }
+  
+  // If we have a phone number, fetch from API
+  if (userPhone && !user) {
+    try {
+      const userResponse = await fetch(`/api/users/${userPhone}`);
       const userData = await userResponse.json();
       if (userData.success && userData.user) {
         user = userData.user;
@@ -120,7 +137,7 @@ export const generateGeminiResponse = async (message: string, phone?: string): P
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           patientName: patientName,
-          phone: user.phone,
+          phone: user.phone || userPhone,
           email: user.email,
           doctorName: doctorName || 'General Physician',
           specialty: specialty || 'General Medicine',
@@ -134,7 +151,8 @@ export const generateGeminiResponse = async (message: string, phone?: string): P
       const appointmentData = await response.json();
       
       if (appointmentData.success) {
-        return `✅ Appointment scheduled successfully!\n\nPatient: ${patientName}\nDoctor: Dr. ${doctorName} (${specialty})\nHospital: ${hospitalName}\nDate: ${appointmentDate}\nTime: ${appointmentTime}\n\nA WhatsApp confirmation has been sent. You will receive a reminder 1 day before your appointment.\n\n📱 **WhatsApp Setup Required:**\nClick: [+14155238886](https://wa.me/14155238886?text=join%20sit-remove)\nOr manually message +14155238886 with "join sit-remove"`;
+        const phoneDisplay = (user.phone || userPhone).replace(/^\+91/, '').replace(/^91/, '');
+        return `✅ Appointment scheduled successfully!\n\nPatient: ${patientName}\nDoctor: Dr. ${doctorName} (${specialty})\nHospital: ${hospitalName}\nDate: ${appointmentDate}\nTime: ${appointmentTime}\n\n📱 A WhatsApp confirmation message has been sent to your registered phone number: ${phoneDisplay}\n\nYou will receive a reminder 1 day before your appointment.\n\n📱 **WhatsApp Setup Required:**\nClick: [+14155238886](https://wa.me/14155238886?text=join%20sit-remove)\nOr manually message +14155238886 with "join sit-remove"`;
       } else {
         return `❌ Error scheduling appointment: ${appointmentData.error || 'Unknown error'}`;
       }
@@ -148,7 +166,7 @@ export const generateGeminiResponse = async (message: string, phone?: string): P
   if (message.toLowerCase().includes('appointment alerts') || message.toLowerCase().includes('show my appointments')) {
     if (user) {
       try {
-        const response = await fetch(`/api/appointments/${user.phone}`);
+        const response = await fetch(`/api/appointments/${user.phone || userPhone}`);
         const appointmentData = await response.json();
         
         if (appointmentData.success && appointmentData.appointments.length > 0) {
@@ -215,7 +233,7 @@ export const generateGeminiResponse = async (message: string, phone?: string): P
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: childName,
-          phone: user.phone,
+          phone: user.phone || userPhone,
           vaccine: vaccine,
           dueDate: dueDate,
           reminderTime: reminderTime
@@ -225,7 +243,8 @@ export const generateGeminiResponse = async (message: string, phone?: string): P
       const vacData = await vacResponse.json();
       
       if (vacData.success) {
-        return `✅ Vaccination reminder scheduled successfully!\n\nChild: ${childName}\nVaccine: ${vaccine}\nDue Date: ${dueDate}\nReminder Time: ${reminderTime}\n\nA WhatsApp confirmation has been sent to your number. You will also receive a reminder one day before the due date at ${reminderTime}.\n\n📱 **WhatsApp Setup Required:**\nClick: [+14155238886](https://wa.me/14155238886?text=join%20sit-remove)\nOr manually message +14155238886 with "join sit-remove"\n\nPlease consult with a healthcare provider for proper vaccination guidance.`;
+        const phoneDisplay = (user.phone || userPhone).replace(/^\+91/, '').replace(/^91/, '');
+        return `✅ Vaccination reminder scheduled successfully!\n\nChild: ${childName}\nVaccine: ${vaccine}\nDue Date: ${dueDate}\nReminder Time: ${reminderTime}\n\n📱 A WhatsApp confirmation message has been sent to your registered phone number: ${phoneDisplay}\n\nYou will also receive a reminder one day before the due date at ${reminderTime}.\n\n📱 **WhatsApp Setup Required:**\nClick: [+14155238886](https://wa.me/14155238886?text=join%20sit-remove)\nOr manually message +14155238886 with "join sit-remove"\n\nPlease consult with a healthcare provider for proper vaccination guidance.`;
       } else {
         return `❌ Error scheduling vaccination: ${vacData.error || 'Unknown error'}`;
       }
