@@ -36,6 +36,7 @@ const authRoutes = require('./routes/auth');
 const placesRoutes = require('./routes/places');
 const healthAlertsRoutes = require('./routes/healthAlerts');
 const appointmentRoutes = require('./routes/appointments');
+const whatsappRoutes = require('./routes/whatsapp');
 
 // API routes (must come before static file serving)
 app.use('/api/vaccination', vaccinationRoutes);
@@ -44,6 +45,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/places', placesRoutes);
 app.use('/api/health-alerts', healthAlertsRoutes);
 app.use('/api/appointments', appointmentRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
 
 // Health check endpoint
 app.get('/health', async (req, res) => {

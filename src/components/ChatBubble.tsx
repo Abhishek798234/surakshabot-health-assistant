@@ -38,9 +38,16 @@ export const ChatBubble = ({ message, isUser, timestamp }: ChatBubbleProps) => {
         "max-w-[80%] md:max-w-md relative group",
         isUser ? "chat-bubble-user ml-auto" : "chat-bubble-bot mr-auto"
       )}>
-        <p className="text-sm leading-relaxed text-glass">
-          {message}
-        </p>
+        <div 
+          className="text-sm leading-relaxed text-glass"
+          dangerouslySetInnerHTML={{
+            __html: message
+              .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+              .replace(/\*(.*?)\*/g, '<em>$1</em>')
+              .replace(/\[([^\]]+)\]\(([^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 underline cursor-pointer">$1</a>')
+              .replace(/\n/g, '<br/>')
+          }}
+        />
         {timestamp && (
           <p className="text-xs text-muted-foreground mt-2 opacity-70">
             {timestamp}
