@@ -18,12 +18,28 @@ if (process.env.TWILIO_SMS_ACCOUNT_SID && process.env.TWILIO_SMS_AUTH_TOKEN) {
   try {
     smsClient = twilio(process.env.TWILIO_SMS_ACCOUNT_SID, process.env.TWILIO_SMS_AUTH_TOKEN);
     console.log('✅ Separate Twilio SMS client created successfully');
+    
+    // Test SMS credentials by making a simple API call
+    smsClient.api.accounts(process.env.TWILIO_SMS_ACCOUNT_SID).fetch()
+      .then(account => {
+        console.log('✅ SMS Twilio authentication verified for account:', account.friendlyName);
+        console.log('✅ SMS Account SID:', account.sid);
+        console.log('✅ SMS Account Status:', account.status);
+      })
+      .catch(error => {
+        console.error('❌ SMS Twilio authentication failed:', error.message);
+        console.error('SMS Error code:', error.code);
+        console.error('SMS More info:', error.moreInfo);
+      });
+      
   } catch (error) {
     console.error('❌ SMS Twilio initialization failed:', error.message);
     smsClient = null;
   }
 } else {
   console.log('❌ SMS Twilio not initialized - missing SMS credentials');
+  console.log('SMS_ACCOUNT_SID present:', !!process.env.TWILIO_SMS_ACCOUNT_SID);
+  console.log('SMS_AUTH_TOKEN present:', !!process.env.TWILIO_SMS_AUTH_TOKEN);
   smsClient = null;
 }
 
