@@ -12,14 +12,19 @@ if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
 
 // Webhook verification (GET request from Twilio)
 router.get('/webhook', (req, res) => {
-  console.log('📞 WhatsApp webhook verification request');
+  console.log('🔥 GET WEBHOOK HIT - Verification request');
+  console.log('🔥 Query params:', req.query);
+  console.log('🔥 Headers:', req.headers);
   res.status(200).send('WhatsApp webhook is working!');
 });
 
 // WhatsApp message webhook (POST request from Twilio)
 router.post('/webhook', async (req, res) => {
   try {
-    console.log('📱 Incoming WhatsApp message:', req.body);
+    console.log('🔥 WEBHOOK HIT - Raw body:', JSON.stringify(req.body, null, 2));
+    console.log('🔥 Headers:', JSON.stringify(req.headers, null, 2));
+    console.log('🔥 Method:', req.method);
+    console.log('🔥 URL:', req.url);
     
     const { Body: messageBody, From: fromNumber, To: toNumber } = req.body;
     
@@ -95,6 +100,7 @@ router.post('/webhook', async (req, res) => {
     }
     
     // Always respond with 200 to Twilio
+    console.log('🔥 Sending OK response to Twilio');
     res.status(200).send('OK');
     
   } catch (error) {

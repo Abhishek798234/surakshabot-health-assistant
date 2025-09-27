@@ -26,15 +26,23 @@ const formatPhoneNumber = (phone) => {
   // Remove all non-digit characters
   let cleanPhone = phone.replace(/\D/g, '');
   
+  console.log('📞 Original phone:', phone);
+  console.log('📞 Clean phone:', cleanPhone);
+  
   // If it starts with 0, replace with +91 (India)
   if (cleanPhone.startsWith('0')) {
     cleanPhone = '+91' + cleanPhone.substring(1);
+  }
+  // If it starts with 91, add +
+  else if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
+    cleanPhone = '+' + cleanPhone;
   }
   // If it doesn't start with +, add +91
   else if (!cleanPhone.startsWith('+')) {
     cleanPhone = '+91' + cleanPhone;
   }
   
+  console.log('📞 Formatted phone:', cleanPhone);
   return cleanPhone;
 };
 
@@ -73,21 +81,33 @@ You will receive a reminder one day before the due date. Please consult with a h
 👨‍⚕️ Surakshabot Health Assistant`;
 
       try {
-        console.log('📤 Sending WhatsApp confirmation to:', formattedPhone);
+        console.log('📤 Attempting WhatsApp send:');
+        console.log('From:', process.env.TWILIO_WHATSAPP_NUMBER);
+        console.log('To:', `whatsapp:${formattedPhone}`);
+        console.log('Message length:', confirmationMessage.length);
+        
         const message = await client.messages.create({
           from: process.env.TWILIO_WHATSAPP_NUMBER,
           to: `whatsapp:${formattedPhone}`,
           body: confirmationMessage
         });
-        console.log('✅ WhatsApp confirmation sent. SID:', message.sid);
+        console.log('✅ WhatsApp confirmation sent successfully!');
+        console.log('Message SID:', message.sid);
+        console.log('Status:', message.status);
       } catch (twilioError) {
-        console.error('❌ WhatsApp send error:');
+        console.error('❌ WhatsApp send failed:');
         console.error('Error code:', twilioError.code);
         console.error('Error message:', twilioError.message);
         console.error('More info:', twilioError.moreInfo);
+        console.error('Status:', twilioError.status);
+        console.error('Full error:', JSON.stringify(twilioError, null, 2));
       }
     } else {
-      console.log('⚠️ WhatsApp confirmation skipped - Twilio not configured');
+      console.log('⚠️ WhatsApp confirmation skipped:');
+      console.log('Client available:', !!client);
+      console.log('WhatsApp number set:', !!process.env.TWILIO_WHATSAPP_NUMBER);
+      console.log('Account SID:', !!process.env.TWILIO_ACCOUNT_SID);
+      console.log('Auth Token:', !!process.env.TWILIO_AUTH_TOKEN);
     }
     
     res.json({ 
@@ -101,6 +121,55 @@ You will receive a reminder one day before the due date. Please consult with a h
     res.status(500).json({ 
       success: false, 
       error: error.message 
+    });
+  }
+});
+
+// Manual test endpoint for immediate WhatsApp
+router.post('/test-immediate', async (req, res) => {
+  try {
+    const { phone, name, vaccine } = req.body;
+    const formattedPhone = formatPhoneNumber(phone);
+    
+    if (!client) {
+      return res.status(400).json({
+        success: false,
+        error: 'Twilio not configured'
+      });
+    }
+    
+    const testMessage = `✅ TEST Vaccination Reminder!
+
+Child: ${name || 'Test Child'}
+Vaccine: ${vaccine || 'Test Vaccine'}
+Due Date: Tomorrow
+
+This is a test message to verify WhatsApp integration.
+
+👨⚕️ Surakshabot Health Assistant`;
+    
+    console.log('🧪 MANUAL TEST - Sending to:', formattedPhone);
+    const message = await client.messages.create({
+      from: process.env.TWILIO_WHATSAPP_NUMBER,
+      to: `whatsapp:${formattedPhone}`,
+      body: testMessage
+    });
+    
+    console.log('✅ Manual test sent. SID:', message.sid);
+    
+    res.json({
+      success: true,
+      message: 'Manual test WhatsApp sent successfully',
+      messageSid: message.sid,
+      to: formattedPhone
+    });
+    
+  } catch (error) {
+    console.error('❌ Manual test failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      code: error.code
     });
   }
 });

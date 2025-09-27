@@ -1,4 +1,4 @@
-# Surakshabot - Local Development Setup
+# Surakshabot - Deployed on Render
 
 ## Quick Start
 

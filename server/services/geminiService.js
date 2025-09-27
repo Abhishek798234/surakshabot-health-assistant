@@ -63,7 +63,7 @@ const generateGeminiResponse = async (message, phone) => {
         const [, childName, vaccine, dueDate, reminderTime] = match;
         
         // Call vaccination API
-        const response = await fetch(`${process.env.BASE_URL || 'http://localhost:8000'}/api/vaccination/schedule`, {
+        const response = await fetch(`${process.env.BASE_URL}/api/vaccination/schedule`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -98,7 +98,7 @@ const generateGeminiResponse = async (message, phone) => {
         const [, patientName, doctorName, appointmentDate, appointmentTime] = match;
         
         // Call appointment API
-        const response = await fetch(`${process.env.BASE_URL || 'http://localhost:8000'}/api/appointments/schedule`, {
+        const response = await fetch(`${process.env.BASE_URL}/api/appointments/schedule`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
