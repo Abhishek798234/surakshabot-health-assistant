@@ -57,7 +57,7 @@ export const ChatbotModal = ({ isOpen, onClose }: ChatbotModalProps) => {
     return savedUser ? JSON.parse(savedUser) : null;
   });
   const [showLocationPermission, setShowLocationPermission] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(false); // Initially hidden
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -332,14 +332,14 @@ export const ChatbotModal = ({ isOpen, onClose }: ChatbotModalProps) => {
                 <ChatInput onSendMessage={handleSendMessage} isLoading={isTyping} />
               </div>
 
-              {/* Sliding Sidebar - Light Purple Chat Box */}
-              <div className={`fixed top-0 right-0 h-full w-96 bg-background/95 backdrop-blur-sm border-l border-glass-border/20 transform transition-transform duration-300 ease-in-out z-10 ${
-                showSidebar ? 'translate-x-0' : 'translate-x-full'
-              }`}>
-                <div className="h-full p-6 pt-20">
-                  <LightPurpleChatBox onButtonClick={handleQuickAction} />
+              {/* Light Purple Chat Box - Only appears when hamburger clicked */}
+              {showSidebar && (
+                <div className="fixed top-0 right-0 h-full w-96 bg-background/95 backdrop-blur-sm border-l border-glass-border/20 z-10 animate-in slide-in-from-right duration-300">
+                  <div className="h-full p-6 pt-20">
+                    <LightPurpleChatBox onButtonClick={handleQuickAction} />
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Overlay */}
               {showSidebar && (
