@@ -48,6 +48,20 @@ app.use('/api/appointments', appointmentRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/sms', require('./routes/sms'));
 
+// SMS test endpoint
+app.get('/api/sms/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'SMS service is running',
+    timestamp: new Date().toISOString(),
+    routes: [
+      'GET /api/sms/webhook - Webhook verification',
+      'POST /api/sms/webhook - SMS message handler', 
+      'POST /api/sms/send-test - Send test SMS'
+    ]
+  });
+});
+
 // Health check endpoint
 app.get('/health', async (req, res) => {
   try {
